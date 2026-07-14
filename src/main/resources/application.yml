@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: kata-mongodb
+  mongodb:
+    uri: mongodb://localhost:27017/kata_mongodb
+    database: kata_mongodb
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
