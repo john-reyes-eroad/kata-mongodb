@@ -78,6 +78,8 @@ Default Mongo config is in `bootstrap/src/main/resources/application.yml`.
 
 Docker Compose limits the application container to one CPU and 512 MiB of memory. The image assigns up to 65% of available container memory to the heap, caps direct memory at 64 MiB, and exits on out-of-memory errors so the container can restart cleanly.
 
+The final image uses a stripped, compressed Java 25 runtime produced by `jlink` on Alpine. It retains only the Java modules and native runtime libraries required by the application.
+
 Both Compose services use Docker's `local` logging driver with three 10 MiB rotated log files.
 
 ## API reference
