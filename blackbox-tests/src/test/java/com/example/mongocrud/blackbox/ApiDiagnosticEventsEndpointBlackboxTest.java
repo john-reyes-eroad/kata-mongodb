@@ -5,7 +5,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -18,13 +17,7 @@ class ApiDiagnosticEventsEndpointBlackboxTest extends AbstractBlackboxTest {
     void diagnosticEventCrudShouldWork() {
         String suffix = randomSuffix();
         String vehicleId = createVehicle(suffix);
-
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("vehicleId", vehicleId);
-        payload.put("code", "P0001-" + suffix);
-        payload.put("severity", "HIGH");
-        payload.put("description", "Fuel Volume Regulator issue " + suffix);
-        payload.put("occurredAt", Instant.now().toString());
+        Map<String, Object> payload = diagnosticEventPayload(vehicleId, suffix);
 
         String eventId = given()
                 .contentType(ContentType.JSON)
@@ -34,15 +27,29 @@ class ApiDiagnosticEventsEndpointBlackboxTest extends AbstractBlackboxTest {
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
+                .body("vehicle.id", equalTo(vehicleId))
+                .body("code", equalTo(payload.get("code")))
+                .body("severity", equalTo(payload.get("severity")))
+                .body("description", equalTo(payload.get("description")))
+                .body("occurredAt", notNullValue())
                 .extract()
                 .path("id");
+        trackResource("/api/diagnostic-events", eventId);
 
         given().when().get("/api/diagnostic-events").then().statusCode(200).body("id", hasItem(eventId));
-        given().when().get("/api/diagnostic-events/{id}", eventId).then().statusCode(200).body("id", equalTo(eventId));
+        given()
+                .when()
+                .get("/api/diagnostic-events/{id}", eventId)
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(eventId))
+                .body("vehicle.id", equalTo(vehicleId))
+                .body("code", equalTo(payload.get("code")))
+                .body("severity", equalTo(payload.get("severity")))
+                .body("description", equalTo(payload.get("description")));
 
         Map<String, Object> updatePayload = new LinkedHashMap<>(payload);
-        updatePayload.put("severity", "MEDIUM");
-
+        updatePayload.put("severity", "MEDIUM-" + suffix);
         given()
                 .contentType(ContentType.JSON)
                 .body(updatePayload)
@@ -51,11 +58,48 @@ class ApiDiagnosticEventsEndpointBlackboxTest extends AbstractBlackboxTest {
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(eventId))
-                .body("severity", equalTo("MEDIUM"));
+                .body("vehicle.id", equalTo(vehicleId))
+                .body("severity", equalTo(updatePayload.get("severity")));
+        given()
+                .when()
+                .get("/api/diagnostic-events/{id}", eventId)
+                .then()
+                .statusCode(200)
+                .body("severity", equalTo(updatePayload.get("severity")));
 
-        given().when().delete("/api/diagnostic-events/{id}", eventId).then().statusCode(204);
+        deleteResource("/api/diagnostic-events", eventId);
         given().when().get("/api/diagnostic-events/{id}", eventId).then().statusCode(404).body("code", equalTo("not_found"));
-        given().when().delete("/api/vehicles/{id}", vehicleId).then().statusCode(204);
+    }
+
+    @Test
+    void updatingUnknownDiagnosticEventShouldReturnNotFound() {
+        String suffix = randomSuffix();
+        String vehicleId = createVehicle(suffix);
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(diagnosticEventPayload(vehicleId, suffix))
+                .when()
+                .put("/api/diagnostic-events/{id}", "missing-" + randomSuffix())
+                .then()
+                .statusCode(404)
+                .body("code", equalTo("not_found"));
+    }
+
+    @Test
+    void diagnosticEventCountShouldSupportAbsentBlankMatchingAndNonmatchingKeywords() {
+        String suffix = randomSuffix();
+        String vehicleId = createVehicle(suffix);
+        Map<String, Object> payload = diagnosticEventPayload(vehicleId, suffix);
+        String eventId = createDiagnosticEvent(payload);
+
+        assertCountEndpoint(
+                "/api/diagnostic-events",
+                (String) payload.get("code"),
+                (String) payload.get("severity"),
+                (String) payload.get("description"),
+                eventId,
+                vehicleId
+        );
     }
 }
-
