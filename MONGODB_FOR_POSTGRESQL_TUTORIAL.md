@@ -121,7 +121,82 @@ Use this rule:
 1. **Embed** if child lifecycle is tied to parent and read together always.
 2. **Reference** if entities are reused or updated independently.
 
+### PostgreSQL comparison
+
+In PostgreSQL, you usually normalize first:
+
+- `trips(vehicle_id, driver_id)` with foreign keys
+- join when reading combined data
+
+In MongoDB, you decide between:
+
+- embed child data directly inside the parent document
+- store child in its own collection and keep only IDs (reference)
+
+### Embedding example
+
+If location points are only meaningful inside one trip and always read with that trip:
+
+```javascript
+{
+  _id: ObjectId("..."),
+  vehicleId: ObjectId("..."),
+  driverId: ObjectId("..."),
+  startTime: ISODate("2026-07-15T00:00:00Z"),
+  locations: [
+    { latitude: -36.8485, longitude: 174.7633, recordedAt: ISODate("...") },
+    { latitude: -36.8500, longitude: 174.7650, recordedAt: ISODate("...") }
+  ]
+}
+```
+
+PostgreSQL equivalent:
+
+- `trips` table
+- `locations` table with `trip_id` FK
+- join on read
+
+Embedding wins when reads are trip-centric and location churn is scoped to that trip.
+
+### Referencing example
+
+If entities are reused independently (as in this project), use references:
+
+```javascript
+// trips
+{
+  _id: ObjectId("trip1"),
+  vehicleId: ObjectId("veh1"),
+  driverId: ObjectId("drv1"),
+  distanceKm: NumberDecimal("120.7")
+}
+
+// diagnostic_events
+{
+  _id: ObjectId("diag1"),
+  vehicleId: ObjectId("veh1"),
+  code: "P0001"
+}
+```
+
+PostgreSQL equivalent:
+
+- standard normalized tables with FKs
+- joins for relationship traversal
+
+Referencing wins when parent and child are updated separately or shared by many documents.
+
+### Quick decision table
+
+| Question | Prefer embedding | Prefer referencing |
+|---|---|---|
+| Child reused by multiple parents? | No | Yes |
+| Need independent updates/deletes? | No | Yes |
+| Read parent+child together most of the time? | Yes | Sometimes/No |
+| Child array can grow very large/unbounded? | No | Yes |
+
 In this repo:
+
 - `trip` references `vehicle` and `driver`
 - `location` references `trip`
 - `diagnosticEvent` references `vehicle`
@@ -153,7 +228,59 @@ What you had in PostgreSQL and MongoDB equivalents:
 - CHECK constraints: schema validation / app validation
 - SERIAL/BIGSERIAL: ObjectId/UUID
 
-## Step 11: Aggregation framework (Mongo equivalent of complex SQL)
+## Step 11: MongoDB join operations (`$lookup`) vs PostgreSQL joins
+
+PostgreSQL joins are first-class in normal query flow:
+
+```sql
+SELECT t.id, v.vin, d.name
+FROM trips t
+JOIN vehicles v ON v.id = t.vehicle_id
+JOIN drivers d ON d.id = t.driver_id
+WHERE t.distance_km >= 100;
+```
+
+MongoDB equivalent uses aggregation with `$lookup`:
+
+```javascript
+db.trips.aggregate([
+  { $match: { distanceKm: { $gte: NumberDecimal("100") } } },
+  {
+    $lookup: {
+      from: "vehicles",
+      localField: "vehicleId",
+      foreignField: "_id",
+      as: "vehicle"
+    }
+  },
+  {
+    $lookup: {
+      from: "drivers",
+      localField: "driverId",
+      foreignField: "_id",
+      as: "driver"
+    }
+  },
+  { $unwind: "$vehicle" },
+  { $unwind: "$driver" },
+  {
+    $project: {
+      _id: 1,
+      distanceKm: 1,
+      "vehicle.vin": 1,
+      "driver.name": 1
+    }
+  }
+])
+```
+
+How to think about it:
+
+- PostgreSQL: normalize first, join often.
+- MongoDB: model for read patterns first, join only when needed.
+- If you need `$lookup` in every hot query, reconsider embedding or read model denormalization.
+
+## Step 12: Aggregation framework (Mongo equivalent of complex SQL)
 
 Think of aggregation pipelines like composable SQL stages.
 
@@ -165,7 +292,7 @@ db.trips.aggregate([
 ])
 ```
 
-## Step 12: Java usage in this repo (driver-level)
+## Step 13: Java usage in this repo (driver-level)
 
 This codebase uses:
 - `mongodb-driver-sync`
@@ -178,7 +305,7 @@ Important patterns:
 3. Create indexes at startup.
 4. Convert temporal and numeric types explicitly (Instant, Decimal128).
 
-## Step 13: Practice checklist (do these in order)
+## Step 14: Practice checklist (do these in order)
 
 1. Create a collection and insert 10 sample documents in `mongosh`.
 2. Add a unique index and test duplicate key failure.
@@ -187,7 +314,7 @@ Important patterns:
 5. Model one entity pair both ways: embedded vs referenced.
 6. Benchmark list endpoint behavior with and without N+1.
 
-## Step 14: Common mistakes to avoid
+## Step 15: Common mistakes to avoid
 
 - Treating MongoDB like PostgreSQL with too many normalized collections.
 - Forgetting indexes on query fields.
@@ -195,7 +322,7 @@ Important patterns:
 - Storing inconsistent date/number types.
 - Using `$regex` on unindexed large fields in hot paths.
 
-## Step 15: 7-day learning plan
+## Step 16: 7-day learning plan
 
 1. Day 1: CRUD + shell basics + ObjectId
 2. Day 2: Indexes + explain plans
@@ -207,4 +334,4 @@ Important patterns:
 
 ---
 
-If you master Steps 1, 6, 7, and 11 first, you’ll avoid most production mistakes when transitioning from PostgreSQL to MongoDB.
+If you master Steps 1, 6, 7, 11, and 12 first, you’ll avoid most production mistakes when transitioning from PostgreSQL to MongoDB.
