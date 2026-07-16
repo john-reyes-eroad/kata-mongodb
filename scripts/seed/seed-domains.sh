@@ -8,12 +8,12 @@ if [[ $# -gt 0 ]]; then
 fi
 
 if ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
-  echo "COUNT must be an integer (1-100)." >&2
+  echo "COUNT must be an integer (1-10000)." >&2
   exit 1
 fi
 
-if (( COUNT < 1 || COUNT > 100 )); then
-  echo "COUNT must be between 1 and 100." >&2
+if (( COUNT < 1 || COUNT > 10000 )); then
+  echo "COUNT must be between 1 and 10000." >&2
   exit 1
 fi
 
@@ -57,7 +57,7 @@ for i in $(seq 1 "$COUNT"); do
   vehicle_id="$(extract_id "$(post_json "/api/vehicles" "$vehicle_payload")")"
   vehicle_ids+=("$vehicle_id")
 
-  driver_payload="{\"name\":\"Driver $suffix\",\"licenseNumber\":\"LIC-$suffix\"}"
+  driver_payload="{\"name\":\"Driver $run_token-$suffix\",\"licenseNumber\":\"LIC-$run_token-$suffix\"}"
   driver_id="$(extract_id "$(post_json "/api/drivers" "$driver_payload")")"
   driver_ids+=("$driver_id")
 done
