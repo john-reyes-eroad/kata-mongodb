@@ -6,8 +6,6 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import io.restassured.http.ContentType;
@@ -17,14 +15,8 @@ class ApiLocationsEndpointBlackboxTest extends AbstractBlackboxTest {
 
     @Test
     void locationCrudShouldWork() {
-        String suffix = randomSuffix();
-        TripFixture fixture = createTripFixture(suffix);
-
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("tripId", fixture.tripId());
-        payload.put("latitude", new BigDecimal("-36.8485"));
-        payload.put("longitude", new BigDecimal("174.7633"));
-        payload.put("recordedAt", Instant.now().toString());
+        TripFixture fixture = createTripFixture(randomSuffix());
+        Map<String, Object> payload = locationPayload(fixture.tripId());
 
         String locationId = given()
                 .contentType(ContentType.JSON)
@@ -34,15 +26,24 @@ class ApiLocationsEndpointBlackboxTest extends AbstractBlackboxTest {
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
+                .body("trip.id", equalTo(fixture.tripId()))
+                .body("recordedAt", notNullValue())
                 .extract()
                 .path("id");
+        trackResource("/api/locations", locationId);
 
         given().when().get("/api/locations").then().statusCode(200).body("id", hasItem(locationId));
-        given().when().get("/api/locations/{id}", locationId).then().statusCode(200).body("id", equalTo(locationId));
+        given()
+                .when()
+                .get("/api/locations/{id}", locationId)
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(locationId))
+                .body("trip.id", equalTo(fixture.tripId()))
+                .body("recordedAt", notNullValue());
 
-        Map<String, Object> updatePayload = new LinkedHashMap<>(payload);
+        Map<String, Object> updatePayload = locationPayload(fixture.tripId());
         updatePayload.put("latitude", new BigDecimal("-36.8500"));
-
         given()
                 .contentType(ContentType.JSON)
                 .body(updatePayload)
@@ -50,13 +51,43 @@ class ApiLocationsEndpointBlackboxTest extends AbstractBlackboxTest {
                 .put("/api/locations/{id}", locationId)
                 .then()
                 .statusCode(200)
-                .body("id", equalTo(locationId));
+                .body("id", equalTo(locationId))
+                .body("trip.id", equalTo(fixture.tripId()))
+                .body("recordedAt", notNullValue());
+        given()
+                .when()
+                .get("/api/locations/{id}", locationId)
+                .then()
+                .statusCode(200)
+                .body("trip.id", equalTo(fixture.tripId()));
 
-        given().when().delete("/api/locations/{id}", locationId).then().statusCode(204);
+        deleteResource("/api/locations", locationId);
         given().when().get("/api/locations/{id}", locationId).then().statusCode(404).body("code", equalTo("not_found"));
-        given().when().delete("/api/trips/{id}", fixture.tripId()).then().statusCode(204);
-        given().when().delete("/api/drivers/{id}", fixture.driverId()).then().statusCode(204);
-        given().when().delete("/api/vehicles/{id}", fixture.vehicleId()).then().statusCode(204);
+    }
+
+    @Test
+    void updatingUnknownLocationShouldReturnNotFound() {
+        TripFixture fixture = createTripFixture(randomSuffix());
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(locationPayload(fixture.tripId()))
+                .when()
+                .put("/api/locations/{id}", "missing-" + randomSuffix())
+                .then()
+                .statusCode(404)
+                .body("code", equalTo("not_found"));
+    }
+
+    @Test
+    void locationCountShouldSupportAbsentBlankMatchingAndNonmatchingKeywords() {
+        TripFixture fixture = createTripFixture(randomSuffix());
+        String locationId = createLocation(locationPayload(fixture.tripId()));
+
+        assertCountEndpoint(
+                "/api/locations",
+                locationId,
+                fixture.tripId()
+        );
     }
 }
-
