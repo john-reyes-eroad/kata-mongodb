@@ -38,6 +38,7 @@ This keeps HTTP and Mongo concerns at the edges while business flows are driven 
 - Java 25
 - Maven
 - Docker + Docker Compose
+- GraalVM 25 with `native-image` (native builds only)
 
 ## Run with Docker Compose
 
@@ -63,22 +64,58 @@ Stop:
 docker compose down
 ```
 
-## Run locally without Docker
+The Compose image is built for the container platform and runs the native
+`kata-mongodb` executable. Its final distroless runtime contains only the
+native executable, the required native libraries and CA certificates, plus a
+small BusyBox health-check probe - it does not contain a JRE or shell. The
+application runs as an unprivileged user.
 
-Start MongoDB first, then:
+## JVM build and run
+
+The default Maven build remains a JVM build:
 
 ```bash
 mvn package
 java -jar bootstrap/target/bootstrap-0.0.1-SNAPSHOT.jar
 ```
 
-Default Mongo config is in `bootstrap/src/main/resources/application.yml`.
+Start MongoDB first. Default Mongo config is in
+`bootstrap/src/main/resources/application.yml`.
 
-## Container JVM settings
+## Native build and run
 
-Docker Compose limits the application container to one CPU and 512 MiB of memory. The image assigns up to 65% of available container memory to the heap, caps direct memory at 64 MiB, and exits on out-of-memory errors so the container can restart cleanly.
+Use GraalVM 25 as `JAVA_HOME` and ensure `native-image --version` succeeds.
+The native profile is intentionally configured only on the executable
+`bootstrap` module. It activates Spring Boot AOT processing, produces
+`bootstrap/target/kata-mongodb`, and preserves the normal JVM packaging when
+the profile is absent.
 
-The final image uses a stripped, compressed Java 25 runtime produced by `jlink` on Alpine. It retains only the Java modules and native runtime libraries required by the application.
+```bash
+mvn -pl bootstrap -am -Pnative native:compile
+./bootstrap/target/kata-mongodb
+```
+
+The Spring AOT output supplies application reflection and proxy metadata, and
+the MongoDB driver supplies its own native-image configuration. The only
+application hint registers Hibernate Validator's generated logging classes and
+the concrete validators used by the REST request DTOs, all of which Hibernate
+Validator resolves at runtime. The profile disables the external
+reachability-metadata repository because its current schema is newer than the
+supported GraalVM 25 schema; Spring AOT and dependency-bundled metadata are
+used instead.
+
+## Container settings
+
+Docker Compose limits the application container to one CPU and 512 MiB of
+memory. The native executable starts directly, so JVM heap and direct-memory
+settings do not apply.
+
+Build and inspect the native image:
+
+```bash
+docker compose build app
+docker compose images app
+```
 
 Both Compose services use Docker's `local` logging driver with three 10 MiB rotated log files.
 
