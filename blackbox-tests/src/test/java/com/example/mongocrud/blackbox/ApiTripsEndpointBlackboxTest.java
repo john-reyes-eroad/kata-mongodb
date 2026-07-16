@@ -6,8 +6,6 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import io.restassured.http.ContentType;
@@ -20,13 +18,7 @@ class ApiTripsEndpointBlackboxTest extends AbstractBlackboxTest {
         String suffix = randomSuffix();
         String vehicleId = createVehicle(suffix);
         String driverId = createDriver(suffix);
-
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("vehicleId", vehicleId);
-        payload.put("driverId", driverId);
-        payload.put("startTime", Instant.now().minusSeconds(7200).toString());
-        payload.put("endTime", Instant.now().minusSeconds(3600).toString());
-        payload.put("distanceKm", new BigDecimal("120.7"));
+        Map<String, Object> payload = tripPayload(vehicleId, driverId);
 
         String tripId = given()
                 .contentType(ContentType.JSON)
@@ -36,19 +28,26 @@ class ApiTripsEndpointBlackboxTest extends AbstractBlackboxTest {
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
+                .body("vehicle.id", equalTo(vehicleId))
+                .body("driver.id", equalTo(driverId))
+                .body("distanceKm", equalTo(((BigDecimal) payload.get("distanceKm")).floatValue()))
                 .extract()
                 .path("id");
+        trackResource("/api/trips", tripId);
 
         given().when().get("/api/trips").then().statusCode(200).body("id", hasItem(tripId));
-        given().when().get("/api/trips/{id}", tripId).then().statusCode(200).body("id", equalTo(tripId));
+        given()
+                .when()
+                .get("/api/trips/{id}", tripId)
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(tripId))
+                .body("vehicle.id", equalTo(vehicleId))
+                .body("driver.id", equalTo(driverId))
+                .body("distanceKm", equalTo(((BigDecimal) payload.get("distanceKm")).floatValue()));
 
-        Map<String, Object> updatePayload = new LinkedHashMap<>();
-        updatePayload.put("vehicleId", vehicleId);
-        updatePayload.put("driverId", driverId);
-        updatePayload.put("startTime", Instant.now().minusSeconds(3600).toString());
-        updatePayload.put("endTime", Instant.now().toString());
+        Map<String, Object> updatePayload = tripPayload(vehicleId, driverId);
         updatePayload.put("distanceKm", new BigDecimal("155.2"));
-
         given()
                 .contentType(ContentType.JSON)
                 .body(updatePayload)
@@ -56,12 +55,44 @@ class ApiTripsEndpointBlackboxTest extends AbstractBlackboxTest {
                 .put("/api/trips/{id}", tripId)
                 .then()
                 .statusCode(200)
-                .body("id", equalTo(tripId));
+                .body("id", equalTo(tripId))
+                .body("vehicle.id", equalTo(vehicleId))
+                .body("driver.id", equalTo(driverId))
+                .body("distanceKm", equalTo(((BigDecimal) updatePayload.get("distanceKm")).floatValue()));
+        given()
+                .when()
+                .get("/api/trips/{id}", tripId)
+                .then()
+                .statusCode(200)
+                .body("distanceKm", equalTo(((BigDecimal) updatePayload.get("distanceKm")).floatValue()));
 
-        given().when().delete("/api/trips/{id}", tripId).then().statusCode(204);
+        deleteResource("/api/trips", tripId);
         given().when().get("/api/trips/{id}", tripId).then().statusCode(404).body("code", equalTo("not_found"));
-        given().when().delete("/api/drivers/{id}", driverId).then().statusCode(204);
-        given().when().delete("/api/vehicles/{id}", vehicleId).then().statusCode(204);
+    }
+
+    @Test
+    void updatingUnknownTripShouldReturnNotFound() {
+        TripFixture fixture = createTripFixture(randomSuffix());
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(tripPayload(fixture.vehicleId(), fixture.driverId()))
+                .when()
+                .put("/api/trips/{id}", "missing-" + randomSuffix())
+                .then()
+                .statusCode(404)
+                .body("code", equalTo("not_found"));
+    }
+
+    @Test
+    void tripCountShouldSupportAbsentBlankMatchingAndNonmatchingKeywords() {
+        TripFixture fixture = createTripFixture(randomSuffix());
+
+        assertCountEndpoint(
+                "/api/trips",
+                fixture.tripId(),
+                fixture.vehicleId(),
+                fixture.driverId()
+        );
     }
 }
-
