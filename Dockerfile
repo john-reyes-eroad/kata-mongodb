@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1
-FROM maven:3.9-eclipse-temurin-25 AS builder
+FROM ghcr.io/graalvm/native-image-community:25 AS builder
 
 WORKDIR /build
+
+RUN microdnf install --assumeyes maven \
+  && microdnf clean all
 
 COPY pom.xml ./
 COPY application/pom.xml application/pom.xml
@@ -10,7 +13,7 @@ COPY adapter-outbound-mongodb/pom.xml adapter-outbound-mongodb/pom.xml
 COPY bootstrap/pom.xml bootstrap/pom.xml
 
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn --batch-mode --quiet dependency:go-offline
+    mvn --batch-mode --quiet -pl bootstrap -am -Pnative dependency:go-offline
 
 COPY application/src application/src
 COPY adapter-inbound-rest/src adapter-inbound-rest/src
@@ -18,38 +21,30 @@ COPY adapter-outbound-mongodb/src adapter-outbound-mongodb/src
 COPY bootstrap/src bootstrap/src
 
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn --batch-mode --quiet package -DskipTests
+    mvn --batch-mode --quiet -pl bootstrap -am -Pnative native:compile
 
-FROM eclipse-temurin:25-jdk-alpine AS runtime-builder
+FROM debian:bookworm-slim AS runtime-assets
 
-RUN jlink \
-    --add-modules java.se,java.instrument,java.management,java.naming,java.security.jgss,jdk.crypto.ec,jdk.unsupported \
-    --strip-debug \
-    --no-man-pages \
-    --no-header-files \
-    --compress=zip-6 \
-    --output /opt/java-minimal
+RUN apt-get update \
+  && apt-get install --no-install-recommends --yes busybox-static \
+  && find /usr/lib -name 'libz.so.1.*' -type f -exec cp {} /opt/libz.so.1 \; \
+  && rm -rf /var/lib/apt/lists/*
 
-FROM alpine:3.23
-
-RUN apk add --no-cache ca-certificates libstdc++ \
-  && addgroup -S appuser \
-  && adduser -S -G appuser appuser
+FROM gcr.io/distroless/cc-debian12:nonroot
 
 WORKDIR /app
 
-COPY --from=runtime-builder /opt/java-minimal /opt/java/openjdk
-COPY --from=builder --chown=appuser:appuser \
-    /build/bootstrap/target/bootstrap-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=runtime-assets /bin/busybox /busybox
+COPY --from=runtime-assets /opt/libz.so.1 /lib/libz.so.1
+COPY --from=builder --chown=nonroot:nonroot \
+    /build/bootstrap/target/kata-mongodb /app/kata-mongodb
 
-ENV JAVA_HOME=/opt/java/openjdk \
-    PATH="/opt/java/openjdk/bin:${PATH}" \
-    SERVER_PORT=8080 \
-    JAVA_TOOL_OPTIONS="-XX:InitialRAMPercentage=25.0 -XX:MaxRAMPercentage=65.0 -XX:MaxDirectMemorySize=64m -XX:+ExitOnOutOfMemoryError"
+ENV LD_LIBRARY_PATH=/lib \
+    SERVER_PORT=8080
 EXPOSE 8080
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
-  CMD wget --quiet --spider http://localhost:8080/actuator/health || exit 1
+  CMD ["/busybox", "wget", "-q", "--spider", "http://localhost:8080/actuator/health"]
 
-USER appuser
-ENTRYPOINT ["java", "-jar", "app.jar"]
+USER nonroot
+ENTRYPOINT ["/app/kata-mongodb"]
