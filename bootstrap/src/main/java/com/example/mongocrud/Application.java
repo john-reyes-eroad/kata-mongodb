@@ -2,7 +2,9 @@ package com.example.mongocrud;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ImportRuntimeHints;
 
+@ImportRuntimeHints(HibernateValidatorRuntimeHints.class)
 @SpringBootApplication(scanBasePackages = {
         "com.example.mongocrud",
         "com.example.mongodb.adapter.inbound",
