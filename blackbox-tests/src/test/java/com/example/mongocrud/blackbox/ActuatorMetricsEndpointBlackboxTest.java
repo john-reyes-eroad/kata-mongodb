@@ -2,6 +2,7 @@ package com.example.mongocrud.blackbox;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.hasItem;
 
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,7 @@ class ActuatorMetricsEndpointBlackboxTest extends AbstractBlackboxTest {
                 .get("/actuator/metrics")
                 .then()
                 .statusCode(200)
-                .body("$", hasKey("names"));
+                .body("$", hasKey("names"))
+                .body("names", hasItem("jvm.memory.used"));
     }
 }
-
