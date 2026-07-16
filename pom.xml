@@ -26,4 +26,37 @@
     <java.version>25</java.version>
     <maven.compiler.release>25</maven.compiler.release>
   </properties>
+
+  <profiles>
+    <profile>
+      <id>native</id>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.graalvm.buildtools</groupId>
+              <artifactId>native-maven-plugin</artifactId>
+              <configuration>
+                <skip>true</skip>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+        <plugins>
+          <plugin>
+            <artifactId>maven-install-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>install-reactor-artifact-for-native</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>install</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
