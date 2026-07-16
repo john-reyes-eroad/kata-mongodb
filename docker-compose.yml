@@ -13,6 +13,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
 
   app:
     build:
@@ -25,6 +30,8 @@ services:
       SPRING_MONGODB_URI: mongodb://mongo:27017/kata_mongodb
       SPRING_MONGODB_DATABASE: kata_mongodb
       SERVER_PORT: 8080
+    cpus: 1.0
+    mem_limit: 512m
     depends_on:
       mongo:
         condition: service_healthy
@@ -34,6 +41,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
     restart: unless-stopped
 
 volumes:
