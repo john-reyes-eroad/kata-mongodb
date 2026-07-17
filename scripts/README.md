@@ -17,6 +17,13 @@ Override per command:
 BASE_URL=http://localhost:8080 ./scripts/vehicle/get-vehicles.sh
 ```
 
+## Rate limits
+
+Each `/api/*` request consumes one token from the remote address's shared
+10-requests-per-second quota. If a sequence of scripts exceeds the quota, the
+API returns `429 Too Many Requests` with `Retry-After` and rate-limit headers.
+Forwarded headers such as `X-Forwarded-For` are ignored.
+
 ## Vehicles
 
 - `./scripts/vehicle/get-vehicles.sh`
