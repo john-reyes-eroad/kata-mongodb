@@ -134,6 +134,18 @@ class ApiVehiclesEndpointBlackboxTest extends AbstractBlackboxTest {
     }
 
     @Test
+    void searchingVehiclesWithoutKeywordShouldReturnValidationError() {
+        given()
+                .when()
+                .get("/api/vehicles/search")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("validation_error"))
+                .body("fields[0].field", equalTo("keyword"))
+                .body("fields[0].message", equalTo("Parameter is required"));
+    }
+
+    @Test
     void vehicleCountShouldSupportAbsentBlankMatchingAndNonmatchingKeywords() {
         Map<String, Object> payload = vehiclePayload(randomSuffix());
         createVehicle(payload);
