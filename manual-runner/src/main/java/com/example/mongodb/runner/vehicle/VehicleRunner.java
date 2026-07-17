@@ -1,7 +1,6 @@
 package com.example.mongodb.runner.vehicle;
 
 import java.time.Instant;
-import java.util.List;
 
 import com.example.mongocrud.vehicle.Vehicle;
 import com.example.mongocrud.vehicle.port.outbound.VehiclePersistencePort;
@@ -21,10 +20,10 @@ public class VehicleRunner implements DomainRunner {
 
     @Override
     public void run() {
-        Instant now = Instant.now();
+        var now = Instant.now();
 
         // save
-        Vehicle saved = repository.save(
+        var saved = repository.save(
             new Vehicle(
                 "1HGBH41JXMN109186",
                 "Honda",
@@ -42,7 +41,7 @@ public class VehicleRunner implements DomainRunner {
             .ifPresent(v -> System.out.println("findById: " + v));
 
         // findAll
-        List<Vehicle> all = repository.findAll();
+        var all = repository.findAll();
         System.out.println("findAll count: " + all.size());
 
         // count
@@ -50,11 +49,11 @@ public class VehicleRunner implements DomainRunner {
         System.out.println("count (Honda): " + repository.count("Honda"));
 
         // search
-        List<Vehicle> results = repository.search("Honda");
+        var results = repository.search("Honda");
         System.out.println("search (Honda): " + results.size() + " result(s)");
 
         // update
-        Vehicle updated = repository.save(
+        var updated = repository.save(
             new Vehicle(
                 saved.id(),
                 saved.vin(),
