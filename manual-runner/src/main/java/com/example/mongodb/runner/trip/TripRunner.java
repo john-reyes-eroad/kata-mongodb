@@ -36,12 +36,12 @@ public class TripRunner implements DomainRunner {
         Instant now = Instant.now();
 
         // seed a vehicle and driver to reference
-        Vehicle vehicle = vehicleRepository.save(new Vehicle(null, "TRIP-VIN-001", "Toyota", "Camry", 2020, now, now));
-        Driver driver = driverRepository.save(new Driver(null, "Trip Runner Driver", "DL-TRIP-001", now, now));
+        Vehicle vehicle = vehicleRepository.save(new Vehicle("TRIP-VIN-001", "Toyota", "Camry", 2020, now, now));
+        Driver driver = driverRepository.save(new Driver("Trip Runner Driver", "DL-TRIP-001", now, now));
 
         // save
         Trip saved = tripRepository.save(new Trip(
-                null, vehicle, driver,
+                vehicle, driver,
                 now, now.plusSeconds(3600),
                 new BigDecimal("42.5"),
                 now, now));
