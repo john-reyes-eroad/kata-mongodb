@@ -90,6 +90,30 @@ services:
         max-file: "3"
     restart: unless-stopped
 
+  localstack:
+    profiles: ["native", "java"]
+    image: localstack/localstack:4.3
+    environment:
+      SERVICES: lambda
+      DEBUG: "0"
+    ports:
+      - "4566:4566"
+    volumes:
+      - ./lambda/init.sh:/etc/localstack/init/ready.d/init.sh:ro
+      - ./lambda:/lambda-src:ro
+      - localstack_data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+
   kong:
     profiles: ["native", "java"]
     image: kong:3.9
@@ -112,6 +136,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+    depends_on:
+      localstack:
+        condition: service_healthy
     logging:
       driver: local
       options:
@@ -121,3 +148,4 @@ services:
 
 volumes:
   mongo_data:
+  localstack_data:
