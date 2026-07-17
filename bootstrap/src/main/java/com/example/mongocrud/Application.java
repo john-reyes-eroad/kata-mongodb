@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ImportRuntimeHints;
 
-@ImportRuntimeHints(HibernateValidatorRuntimeHints.class)
+@ImportRuntimeHints({HibernateValidatorRuntimeHints.class, CaffeineRuntimeHints.class})
 @SpringBootApplication(scanBasePackages = {
         "com.example.mongocrud",
         "com.example.mongodb.adapter.inbound",
