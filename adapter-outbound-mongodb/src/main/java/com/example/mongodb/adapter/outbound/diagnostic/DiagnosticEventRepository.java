@@ -32,10 +32,12 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
         this.collection = database.getCollection("diagnostic_events");
     }
 
+    @Override
     public List<DiagnosticEvent> findAll() {
         return collection.find().map(this::toDiagnosticEvent).into(new ArrayList<>());
     }
 
+    @Override
     public Optional<DiagnosticEvent> findById(String id) {
         ObjectId objectId = parseObjectId(id);
         if (objectId == null) {
@@ -48,6 +50,7 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
         return Optional.of(toDiagnosticEvent(document));
     }
 
+    @Override
     public long count(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return collection.countDocuments();
@@ -64,6 +67,7 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
         return collection.countDocuments(filter);
     }
 
+    @Override
     public DiagnosticEvent save(DiagnosticEvent event) {
         ObjectId objectId = parseObjectId(event.id());
         if (objectId == null) {
@@ -89,6 +93,7 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
         return event;
     }
 
+    @Override
     public void delete(DiagnosticEvent event) {
         ObjectId objectId = parseObjectId(event.id());
         if (objectId != null) {
@@ -122,7 +127,7 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
 
         return new DiagnosticEvent(
                 hexId,
-                vehicleId == null ? null : new Vehicle(vehicleId.toHexString(), null, null, null, 0, null, null),
+                vehicleId == null ? null : new Vehicle(vehicleId.toHexString()),
                 document.getString("code"),
                 document.getString("severity"),
                 document.getString("description"),
