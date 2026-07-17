@@ -37,11 +37,13 @@ public class TripRepository implements TripPersistencePort {
         this.collection = database.getCollection("trips");
     }
 
+    @Override
     public List<Trip> findAll() {
         List<Document> documents = collection.find().into(new ArrayList<>());
         return documents.stream().map(this::toTrip).toList();
     }
 
+    @Override
     public Optional<Trip> findById(String id) {
         ObjectId objectId = parseObjectId(id);
         if (objectId == null) {
@@ -54,6 +56,7 @@ public class TripRepository implements TripPersistencePort {
         return Optional.of(toTrip(document));
     }
 
+    @Override
     public Map<String, Trip> findByIds(Collection<String> ids) {
         LinkedHashSet<ObjectId> objectIds = new LinkedHashSet<>();
         for (String id : ids) {
@@ -77,6 +80,7 @@ public class TripRepository implements TripPersistencePort {
         return tripsById;
     }
 
+    @Override
     public long count(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return collection.countDocuments();
@@ -92,6 +96,7 @@ public class TripRepository implements TripPersistencePort {
                 eq("driverId", objectId)));
     }
 
+    @Override
     public Trip save(Trip trip) {
         ObjectId objectId = parseObjectId(trip.id());
         if (objectId == null) {
@@ -117,6 +122,7 @@ public class TripRepository implements TripPersistencePort {
         return trip;
     }
 
+    @Override
     public void delete(Trip trip) {
         ObjectId objectId = parseObjectId(trip.id());
         if (objectId != null) {
@@ -141,8 +147,8 @@ public class TripRepository implements TripPersistencePort {
         ObjectId driverId = document.getObjectId("driverId");
         return new Trip(
                 id == null ? null : id.toHexString(),
-                vehicleId == null ? null : new Vehicle(vehicleId.toHexString(), null, null, null, 0, null, null),
-                driverId == null ? null : new Driver(driverId.toHexString(), null, null, null, null),
+                vehicleId == null ? null : new Vehicle(vehicleId.toHexString()),
+                driverId == null ? null : new Driver(driverId.toHexString()),
                 toInstant(document.getDate("startTime")),
                 toInstant(document.getDate("endTime")),
                 toBigDecimal(document.get("distanceKm")),
