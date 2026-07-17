@@ -3,6 +3,30 @@ _format_version: "3.0"
 services:
   - name: kata-mongodb
     url: http://app:8080
+    plugins:
+      - name: pre-function
+        config:
+          access:
+            - |
+              local http = require("resty.http")
+              local cjson = require("cjson")
+              local payload = cjson.encode({ headers = kong.request.get_headers() })
+              local httpc = http.new()
+              local res, err = httpc:request_uri(
+                "http://localstack:4566/2015-03-31/functions/authorizer/invocations",
+                {
+                  method = "POST",
+                  body = payload,
+                  headers = { ["Content-Type"] = "application/json" },
+                }
+              )
+              if err or not res or res.status ~= 200 then
+                return kong.response.exit(500, { message = "Authorization service unavailable" })
+              end
+              local result = cjson.decode(res.body)
+              if not result.isAuthorized then
+                return kong.response.exit(401, { message = "Unauthorized" })
+              end
     routes:
       - name: kata-mongodb-route
         paths:
