@@ -38,10 +38,12 @@ public class DriverRepository implements DriverPersistencePort {
         this.collection = database.getCollection("drivers");
     }
 
+    @Override
     public List<Driver> findAll() {
         return collection.find().map(this::toDriver).into(new ArrayList<>());
     }
 
+    @Override
     public Optional<Driver> findById(String id) {
         ObjectId objectId = parseObjectId(id);
         if (objectId == null) {
@@ -51,6 +53,7 @@ public class DriverRepository implements DriverPersistencePort {
         return document == null ? Optional.empty() : Optional.of(toDriver(document));
     }
 
+    @Override
     public Map<String, Driver> findByIds(Collection<String> ids) {
         LinkedHashSet<ObjectId> objectIds = new LinkedHashSet<>();
         for (String id : ids) {
@@ -74,16 +77,19 @@ public class DriverRepository implements DriverPersistencePort {
         return driversById;
     }
 
+    @Override
     public List<Driver> search(String keyword) {
         return collection.find(keywordFilter(keyword)).map(this::toDriver).into(new ArrayList<>());
     }
 
+    @Override
     public long count(String keyword) {
         return keyword == null || keyword.isBlank()
                 ? collection.countDocuments()
                 : collection.countDocuments(keywordFilter(keyword));
     }
 
+    @Override
     public Driver save(Driver driver) {
         try {
             ObjectId objectId = parseObjectId(driver.id());
@@ -120,6 +126,7 @@ public class DriverRepository implements DriverPersistencePort {
                 : "Driver name must be unique";
     }
 
+    @Override
     public void delete(Driver driver) {
         ObjectId objectId = parseObjectId(driver.id());
         if (objectId != null) {
