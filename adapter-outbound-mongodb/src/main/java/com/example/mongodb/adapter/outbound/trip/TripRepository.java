@@ -39,7 +39,10 @@ public class TripRepository implements TripPersistencePort {
 
     @Override
     public List<Trip> findAll() {
-        return collection.find().map(this::toTrip).into(new ArrayList<>());
+        return collection
+            .find()
+            .map(this::toTrip)
+            .into(new ArrayList<>());
     }
 
     @Override
