@@ -10,6 +10,7 @@ import com.example.mongocrud.location.port.outbound.LocationPersistencePort;
 import com.example.mongocrud.trip.Trip;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.ReplaceOptions;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -39,14 +40,18 @@ public class LocationRepository implements LocationPersistencePort {
     @Override
     public Optional<Location> findById(String id) {
         var objectId = parseObjectId(id);
+
         if (objectId == null) {
             return Optional.empty();
         }
-        var document = collection.find(eq("_id", objectId)).first();
-        if (document == null) {
-            return Optional.empty();
-        }
-        return Optional.of(toLocation(document));
+
+        var document = collection
+            .find(eq("_id", objectId))
+            .first();
+
+        return document == null
+            ? Optional.empty()
+            : Optional.of(toLocation(document));
     }
 
     @Override
@@ -59,33 +64,43 @@ public class LocationRepository implements LocationPersistencePort {
         if (objectId == null) {
             return 0;
         }
-        return collection.countDocuments(com.mongodb.client.model.Filters.or(
-                eq("_id", objectId),
-                eq("tripId", objectId)));
+        return collection.countDocuments(Filters.or(
+            eq("_id", objectId),
+            eq("tripId", objectId)
+        ));
     }
 
     @Override
     public Location save(Location location) {
         var objectId = parseObjectId(location.id());
+
         if (objectId == null) {
             objectId = new ObjectId();
             var created = new Location(
-                    objectId.toHexString(),
-                    location.trip(),
-                    location.latitude(),
-                    location.longitude(),
-                    location.recordedAt(),
-                    location.createdAt(),
-                    location.updatedAt()
+                objectId.toHexString(),
+                location.trip(),
+                location.latitude(),
+                location.longitude(),
+                location.recordedAt(),
+                location.createdAt(),
+                location.updatedAt()
             );
-            collection.insertOne(toDocument(created, objectId));
+            collection
+                .insertOne(toDocument(created, objectId));
             return created;
         }
 
-        if (collection.replaceOne(eq("_id", objectId), toDocument(location, objectId),
-                new ReplaceOptions().upsert(false)).getMatchedCount() == 0) {
+        var updateResult = collection
+            .replaceOne(
+                eq("_id", objectId),
+                toDocument(location, objectId),
+                new ReplaceOptions().upsert(false)
+            );
+
+        if (updateResult.getMatchedCount() == 0) {
             throw new ResourceNotFoundException("Location not found: " + location.id());
         }
+
         return location;
     }
 
@@ -93,31 +108,32 @@ public class LocationRepository implements LocationPersistencePort {
     public void delete(Location location) {
         var objectId = parseObjectId(location.id());
         if (objectId != null) {
-            collection.deleteOne(eq("_id", objectId));
+            collection
+                .deleteOne(eq("_id", objectId));
         }
     }
 
     private Document toDocument(Location location, ObjectId id) {
         return new Document("_id", id)
-                .append("tripId", parseObjectId(location.trip() == null ? null : location.trip().id()))
-                .append("latitude", toDecimal128(location.latitude()))
-                .append("longitude", toDecimal128(location.longitude()))
-                .append("recordedAt", toDate(location.recordedAt()))
-                .append("createdAt", toDate(location.createdAt()))
-                .append("updatedAt", toDate(location.updatedAt()));
+            .append("tripId", parseObjectId(location.trip() == null ? null : location.trip().id()))
+            .append("latitude", toDecimal128(location.latitude()))
+            .append("longitude", toDecimal128(location.longitude()))
+            .append("recordedAt", toDate(location.recordedAt()))
+            .append("createdAt", toDate(location.createdAt()))
+            .append("updatedAt", toDate(location.updatedAt()));
     }
 
     private Location toLocation(Document document) {
         var id = document.getObjectId("_id");
         var tripId = document.getObjectId("tripId");
         return new Location(
-                id == null ? null : id.toHexString(),
-                tripId == null ? null : new Trip(tripId.toHexString()),
-                toBigDecimal(document.get("latitude")),
-                toBigDecimal(document.get("longitude")),
-                toInstant(document.getDate("recordedAt")),
-                toInstant(document.getDate("createdAt")),
-                toInstant(document.getDate("updatedAt"))
+            id == null ? null : id.toHexString(),
+            tripId == null ? null : new Trip(tripId.toHexString()),
+            toBigDecimal(document.get("latitude")),
+            toBigDecimal(document.get("longitude")),
+            toInstant(document.getDate("recordedAt")),
+            toInstant(document.getDate("createdAt")),
+            toInstant(document.getDate("updatedAt"))
         );
     }
 }
