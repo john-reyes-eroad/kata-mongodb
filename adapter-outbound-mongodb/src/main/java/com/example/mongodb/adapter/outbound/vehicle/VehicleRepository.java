@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 import com.example.mongocrud.common.DuplicateResourceException;
+import com.example.mongocrud.common.ResourceNotFoundException;
 import com.example.mongocrud.vehicle.Vehicle;
 import com.example.mongocrud.vehicle.port.outbound.VehiclePersistencePort;
 import com.mongodb.ErrorCategory;
@@ -101,7 +102,10 @@ public class VehicleRepository implements VehiclePersistencePort {
                 return created;
             }
 
-            collection.replaceOne(eq("_id", objectId), toDocument(vehicle, objectId), new ReplaceOptions().upsert(false));
+            if (collection.replaceOne(eq("_id", objectId), toDocument(vehicle, objectId),
+                    new ReplaceOptions().upsert(false)).getMatchedCount() == 0) {
+                throw new ResourceNotFoundException("Vehicle not found: " + vehicle.id());
+            }
             return vehicle;
         } catch (MongoWriteException ex) {
             if (ex.getError() == null || ex.getError().getCategory() != ErrorCategory.DUPLICATE_KEY) {
