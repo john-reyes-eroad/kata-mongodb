@@ -33,14 +33,14 @@ public class TripRunner implements DomainRunner {
 
     @Override
     public void run() {
-        Instant now = Instant.now();
+        var now = Instant.now();
 
         // seed a vehicle and driver to reference
-        Vehicle vehicle = vehicleRepository.save(new Vehicle("TRIP-VIN-001", "Toyota", "Camry", 2020, now, now));
-        Driver driver = driverRepository.save(new Driver("Trip Runner Driver", "DL-TRIP-001", now, now));
+        var vehicle = vehicleRepository.save(new Vehicle("TRIP-VIN-001", "Toyota", "Camry", 2020, now, now));
+        var driver = driverRepository.save(new Driver("Trip Runner Driver", "DL-TRIP-001", now, now));
 
         // save
-        Trip saved = tripRepository
+        var saved = tripRepository
             .save(
                 new Trip(
                     vehicle,
@@ -58,7 +58,7 @@ public class TripRunner implements DomainRunner {
         tripRepository.findById(saved.id()).ifPresent(t -> System.out.println("findById: " + t));
 
         // findAll
-        List<Trip> all = tripRepository.findAll();
+        var all = tripRepository.findAll();
         System.out.println("findAll count: " + all.size());
 
         // count
@@ -70,7 +70,7 @@ public class TripRunner implements DomainRunner {
         System.out.println("findByIds: " + byIds);
 
         // update
-        Trip updated = tripRepository.save(new Trip(
+        var updated = tripRepository.save(new Trip(
                 saved.id(), vehicle, driver,
                 saved.startTime(), now.plusSeconds(7200),
                 new BigDecimal("88.0"),
