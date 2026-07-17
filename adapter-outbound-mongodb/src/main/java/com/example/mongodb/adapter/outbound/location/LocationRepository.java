@@ -34,7 +34,10 @@ public class LocationRepository implements LocationPersistencePort {
 
     @Override
     public List<Location> findAll() {
-        return collection.find().map(this::toLocation).into(new ArrayList<>());
+        return collection
+            .find()
+            .map(this::toLocation)
+            .into(new ArrayList<>());
     }
 
     @Override
