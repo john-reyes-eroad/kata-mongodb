@@ -39,17 +39,17 @@ public class TripRepository implements TripPersistencePort {
 
     @Override
     public List<Trip> findAll() {
-        List<Document> documents = collection.find().into(new ArrayList<>());
+        var documents = collection.find().into(new ArrayList<>());
         return documents.stream().map(this::toTrip).toList();
     }
 
     @Override
     public Optional<Trip> findById(String id) {
-        ObjectId objectId = parseObjectId(id);
+        var objectId = parseObjectId(id);
         if (objectId == null) {
             return Optional.empty();
         }
-        Document document = collection.find(eq("_id", objectId)).first();
+        var document = collection.find(eq("_id", objectId)).first();
         if (document == null) {
             return Optional.empty();
         }
@@ -58,9 +58,9 @@ public class TripRepository implements TripPersistencePort {
 
     @Override
     public Map<String, Trip> findByIds(Collection<String> ids) {
-        LinkedHashSet<ObjectId> objectIds = new LinkedHashSet<>();
-        for (String id : ids) {
-            ObjectId objectId = parseObjectId(id);
+        var objectIds = new LinkedHashSet<ObjectId>();
+        for (var id : ids) {
+            var objectId = parseObjectId(id);
             if (objectId != null) {
                 objectIds.add(objectId);
             }
@@ -69,10 +69,10 @@ public class TripRepository implements TripPersistencePort {
             return Map.of();
         }
 
-        List<Document> documents = collection.find(Filters.in("_id", objectIds)).into(new ArrayList<>());
-        List<Trip> trips = documents.stream().map(this::toTrip).toList();
-        LinkedHashMap<String, Trip> tripsById = new LinkedHashMap<>();
-        for (Trip trip : trips) {
+        var documents = collection.find(Filters.in("_id", objectIds)).into(new ArrayList<>());
+        var trips = documents.stream().map(this::toTrip).toList();
+        var tripsById = new LinkedHashMap<String, Trip>();
+        for (var trip : trips) {
             if (trip.id() != null) {
                 tripsById.put(trip.id(), trip);
             }
@@ -86,7 +86,7 @@ public class TripRepository implements TripPersistencePort {
             return collection.countDocuments();
         }
 
-        ObjectId objectId = parseObjectId(keyword);
+        var objectId = parseObjectId(keyword);
         if (objectId == null) {
             return 0;
         }
@@ -98,10 +98,10 @@ public class TripRepository implements TripPersistencePort {
 
     @Override
     public Trip save(Trip trip) {
-        ObjectId objectId = parseObjectId(trip.id());
+        var objectId = parseObjectId(trip.id());
         if (objectId == null) {
             objectId = new ObjectId();
-            Trip created = new Trip(
+            var created = new Trip(
                     objectId.toHexString(),
                     trip.vehicle(),
                     trip.driver(),
@@ -124,7 +124,7 @@ public class TripRepository implements TripPersistencePort {
 
     @Override
     public void delete(Trip trip) {
-        ObjectId objectId = parseObjectId(trip.id());
+        var objectId = parseObjectId(trip.id());
         if (objectId != null) {
             collection.deleteOne(eq("_id", objectId));
         }
@@ -142,9 +142,9 @@ public class TripRepository implements TripPersistencePort {
     }
 
     private Trip toTrip(Document document) {
-        ObjectId id = document.getObjectId("_id");
-        ObjectId vehicleId = document.getObjectId("vehicleId");
-        ObjectId driverId = document.getObjectId("driverId");
+        var id = document.getObjectId("_id");
+        var vehicleId = document.getObjectId("vehicleId");
+        var driverId = document.getObjectId("driverId");
         return new Trip(
                 id == null ? null : id.toHexString(),
                 vehicleId == null ? null : new Vehicle(vehicleId.toHexString()),
