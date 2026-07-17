@@ -40,7 +40,10 @@ public class VehicleRepository implements VehiclePersistencePort {
 
     @Override
     public List<Vehicle> findAll() {
-        return collection.find().map(this::toVehicle).into(new ArrayList<>());
+        return collection
+            .find()
+            .map(this::toVehicle)
+            .into(new ArrayList<>());
     }
 
     @Override
