@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 
 class RateLimitBlackboxTest extends AbstractBlackboxTest {
 
-    private static final int REQUESTS_PER_SECOND = 10;
+    private static final int REQUESTS_PER_SECOND = 100;
 
     @BeforeEach
     void disableRequestPacing() throws InterruptedException {
@@ -42,7 +42,7 @@ class RateLimitBlackboxTest extends AbstractBlackboxTest {
         assertEquals(REQUESTS_PER_SECOND, successfulRequests);
         assertEquals(2, rejectedRequests.size());
         for (Response rejectedRequest : rejectedRequests) {
-            assertEquals("10", rejectedRequest.getHeader("RateLimit-Limit"));
+            assertEquals(String.valueOf(REQUESTS_PER_SECOND), rejectedRequest.getHeader("RateLimit-Limit"));
             assertEquals("0", rejectedRequest.getHeader("RateLimit-Remaining"));
             assertTrue(Long.parseLong(rejectedRequest.getHeader("Retry-After")) >= 1);
             assertEquals("too_many_requests", rejectedRequest.jsonPath().getString("code"));
