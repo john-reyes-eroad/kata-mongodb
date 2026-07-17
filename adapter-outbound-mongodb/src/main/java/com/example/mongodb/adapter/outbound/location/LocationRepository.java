@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import com.example.mongocrud.common.ResourceNotFoundException;
 import com.example.mongocrud.location.Location;
 import com.example.mongocrud.location.port.outbound.LocationPersistencePort;
 import com.example.mongocrud.trip.Trip;
@@ -77,7 +78,10 @@ public class LocationRepository implements LocationPersistencePort {
             return created;
         }
 
-        collection.replaceOne(eq("_id", objectId), toDocument(location, objectId), new ReplaceOptions().upsert(false));
+        if (collection.replaceOne(eq("_id", objectId), toDocument(location, objectId),
+                new ReplaceOptions().upsert(false)).getMatchedCount() == 0) {
+            throw new ResourceNotFoundException("Location not found: " + location.id());
+        }
         return location;
     }
 
