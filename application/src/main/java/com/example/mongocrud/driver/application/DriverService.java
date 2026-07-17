@@ -37,8 +37,8 @@ public class DriverService implements DriverUseCase {
     }
 
     public Driver create(DriverUpsertCommand command) {
-        Instant now = Instant.now();
-        Driver driver = new Driver(
+        var now = Instant.now();
+        var driver = new Driver(
                 null,
                 command.name(),
                 command.licenseNumber(),
@@ -49,8 +49,8 @@ public class DriverService implements DriverUseCase {
     }
 
     public Driver update(String id, DriverUpsertCommand command) {
-        Driver existing = findById(id);
-        Driver updated = new Driver(
+        var existing = findById(id);
+        var updated = new Driver(
                 existing.id(),
                 command.name(),
                 command.licenseNumber(),
@@ -61,7 +61,7 @@ public class DriverService implements DriverUseCase {
     }
 
     public void delete(String id) {
-        Driver driver = findById(id);
+        var driver = findById(id);
         repository.delete(driver);
     }
 
@@ -69,7 +69,7 @@ public class DriverService implements DriverUseCase {
         if (keyword == null) {
             return null;
         }
-        String trimmedKeyword = keyword.trim();
+        var trimmedKeyword = keyword.trim();
         return trimmedKeyword.isEmpty() ? null : trimmedKeyword;
     }
 }
