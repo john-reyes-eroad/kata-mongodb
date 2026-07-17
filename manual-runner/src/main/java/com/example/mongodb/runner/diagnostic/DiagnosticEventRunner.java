@@ -30,11 +30,11 @@ public class DiagnosticEventRunner implements DomainRunner {
         Instant now = Instant.now();
 
         // seed a vehicle to reference
-        Vehicle vehicle = vehicleRepository.save(new Vehicle(null, "DIAG-VIN-001", "Ford", "Transit", 2019, now, now));
+        Vehicle vehicle = vehicleRepository.save(new Vehicle("DIAG-VIN-001", "Ford", "Transit", 2019, now, now));
 
         // save
         DiagnosticEvent saved = diagnosticRepository.save(new DiagnosticEvent(
-                null, vehicle,
+                vehicle,
                 "P0300", "ERROR",
                 "Random/Multiple Cylinder Misfire Detected",
                 now, now, now));
