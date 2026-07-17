@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.example.mongocrud.common.ResourceNotFoundException;
-import com.example.mongocrud.driver.Driver;
 import com.example.mongocrud.driver.port.inbound.DriverUseCase;
 import com.example.mongocrud.driver.port.outbound.DriverPersistencePort;
 import com.example.mongocrud.trip.Trip;
@@ -48,9 +47,9 @@ public class TripService implements TripUseCase {
     }
 
     public Map<String, Trip> findByIds(Collection<String> ids) {
-        List<Trip> trips = hydrate(repository.findByIds(ids).values().stream().toList());
-        Map<String, Trip> tripsById = new LinkedHashMap<>();
-        for (Trip trip : trips) {
+        var trips = hydrate(repository.findByIds(ids).values().stream().toList());
+        var tripsById = new LinkedHashMap<String, Trip>();
+        for (var trip : trips) {
             if (trip.id() != null) {
                 tripsById.put(trip.id(), trip);
             }
@@ -63,8 +62,8 @@ public class TripService implements TripUseCase {
     }
 
     public Trip create(TripUpsertCommand command) {
-        Instant now = Instant.now();
-        Trip trip = new Trip(
+        var now = Instant.now();
+        var trip = new Trip(
                 null,
                 vehicleService.findById(command.vehicleId()),
                 driverService.findById(command.driverId()),
@@ -78,8 +77,8 @@ public class TripService implements TripUseCase {
     }
 
     public Trip update(String id, TripUpsertCommand command) {
-        Trip existing = findById(id);
-        Trip updated = new Trip(
+        var existing = findById(id);
+        var updated = new Trip(
                 existing.id(),
                 vehicleService.findById(command.vehicleId()),
                 driverService.findById(command.driverId()),
@@ -93,14 +92,14 @@ public class TripService implements TripUseCase {
     }
 
     public void delete(String id) {
-        Trip trip = findById(id);
+        var trip = findById(id);
         repository.delete(trip);
     }
 
     private List<Trip> hydrate(List<Trip> trips) {
-        LinkedHashSet<String> vehicleIds = new LinkedHashSet<>();
-        LinkedHashSet<String> driverIds = new LinkedHashSet<>();
-        for (Trip trip : trips) {
+        var vehicleIds = new LinkedHashSet<String>();
+        var driverIds = new LinkedHashSet<String>();
+        for (var trip : trips) {
             if (trip.vehicle() != null && trip.vehicle().id() != null) {
                 vehicleIds.add(trip.vehicle().id());
             }
@@ -109,8 +108,8 @@ public class TripService implements TripUseCase {
             }
         }
 
-        Map<String, com.example.mongocrud.vehicle.Vehicle> vehiclesById = vehicleRepository.findByIds(vehicleIds);
-        Map<String, Driver> driversById = driverRepository.findByIds(driverIds);
+        var vehiclesById = vehicleRepository.findByIds(vehicleIds);
+        var driversById = driverRepository.findByIds(driverIds);
         return trips.stream()
                 .map(trip -> new Trip(
                         trip.id(),
@@ -132,7 +131,7 @@ public class TripService implements TripUseCase {
         if (keyword == null) {
             return null;
         }
-        String trimmedKeyword = keyword.trim();
+        var trimmedKeyword = keyword.trim();
         return trimmedKeyword.isEmpty() ? null : trimmedKeyword;
     }
 }
