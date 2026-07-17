@@ -2,7 +2,6 @@ package com.example.mongodb.runner.location;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 
 import com.example.mongocrud.location.Location;
 import com.example.mongocrud.location.port.outbound.LocationPersistencePort;
@@ -26,13 +25,13 @@ public class LocationRunner implements DomainRunner {
 
     @Override
     public void run() {
-        Instant now = Instant.now();
+        var now = Instant.now();
 
         // seed a trip to reference
-        Trip trip = tripRepository.save(new Trip(null, null, now, now.plusSeconds(1800), new BigDecimal("10.0"), now, now));
+        var trip = tripRepository.save(new Trip(null, null, now, now.plusSeconds(1800), new BigDecimal("10.0"), now, now));
 
         // save
-        Location saved = locationRepository.save(new Location(
+        var saved = locationRepository.save(new Location(
                 trip,
                 new BigDecimal("-36.8485"),
                 new BigDecimal("174.7633"),
@@ -43,7 +42,7 @@ public class LocationRunner implements DomainRunner {
         locationRepository.findById(saved.id()).ifPresent(l -> System.out.println("findById: " + l));
 
         // findAll
-        List<Location> all = locationRepository.findAll();
+        var all = locationRepository.findAll();
         System.out.println("findAll count: " + all.size());
 
         // count
@@ -51,7 +50,7 @@ public class LocationRunner implements DomainRunner {
         System.out.println("count (by tripId):   " + locationRepository.count(trip.id()));
 
         // update
-        Location updated = locationRepository.save(new Location(
+        var updated = locationRepository.save(new Location(
                 saved.id(), trip,
                 new BigDecimal("-36.8600"),
                 new BigDecimal("174.7700"),
