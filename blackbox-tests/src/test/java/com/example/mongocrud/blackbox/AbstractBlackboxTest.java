@@ -2,8 +2,11 @@ package com.example.mongocrud.blackbox;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 
 import java.math.BigDecimal;
@@ -13,15 +16,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.locks.LockSupport;
 
 import io.restassured.RestAssured;
+import io.restassured.filter.Filter;
 import io.restassured.http.ContentType;
+import io.restassured.response.ValidatableResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 
 abstract class AbstractBlackboxTest {
 
+    private static final long REQUEST_INTERVAL_NANOS = 100_000_000L;
+    private static final Object REQUEST_PACING_LOCK = new Object();
     private final List<TestResource> createdResources = new ArrayList<>();
+    private static volatile boolean rateLimitPacingDisabled;
+    private static long nextRequestNanos;
 
     @BeforeAll
     static void configureBaseUrl() {
@@ -30,6 +40,13 @@ abstract class AbstractBlackboxTest {
         RestAssured.baseURI = fromProperty != null && !fromProperty.isBlank()
                 ? fromProperty
                 : (fromEnv != null && !fromEnv.isBlank() ? fromEnv : "http://localhost:8080");
+        RestAssured.requestSpecification = null;
+        RestAssured.filters((Filter) (request, response, context) -> {
+            if (!rateLimitPacingDisabled) {
+                paceApiRequests();
+            }
+            return context.next(request, response);
+        });
     }
 
     protected record TripFixture(String tripId, String vehicleId, String driverId) {
@@ -40,6 +57,19 @@ abstract class AbstractBlackboxTest {
 
     protected String randomSuffix() {
         return UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    protected static void setRateLimitPacingDisabled(boolean disabled) {
+        rateLimitPacingDisabled = disabled;
+    }
+
+    private static void paceApiRequests() {
+        synchronized (REQUEST_PACING_LOCK) {
+            long now = System.nanoTime();
+            long scheduledRequest = Math.max(now, nextRequestNanos);
+            LockSupport.parkNanos(scheduledRequest - now);
+            nextRequestNanos = scheduledRequest + REQUEST_INTERVAL_NANOS;
+        }
     }
 
     protected String createVehicle(String suffix) {
@@ -243,5 +273,102 @@ abstract class AbstractBlackboxTest {
                 .statusCode(200)
                 .body("$", aMapWithSize(1))
                 .body("count", equalTo(0));
+    }
+
+    protected void assertNotFound(ValidatableResponse response) {
+        response
+                .statusCode(404)
+                .body("$", aMapWithSize(2))
+                .body("$", allOf(hasKey("code"), hasKey("message")))
+                .body("code", equalTo("not_found"))
+                .body("message", notNullValue());
+    }
+
+    protected void assertValidationError(ValidatableResponse response, String field) {
+        response
+                .statusCode(400)
+                .body("$", aMapWithSize(3))
+                .body("$", allOf(hasKey("code"), hasKey("message"), hasKey("fields")))
+                .body("code", equalTo("validation_error"))
+                .body("message", equalTo("Request validation failed"))
+                .body("fields.field", hasItem(field));
+    }
+
+    protected void assertVehicleContract(ValidatableResponse response) {
+        response
+                .body("$", aMapWithSize(7))
+                .body("$", allOf(
+                        hasKey("id"), hasKey("vin"), hasKey("make"), hasKey("model"),
+                        hasKey("year"), hasKey("createdAt"), hasKey("updatedAt")))
+                .body("id", notNullValue())
+                .body("vin", notNullValue())
+                .body("make", notNullValue())
+                .body("model", notNullValue())
+                .body("year", notNullValue())
+                .body("createdAt", notNullValue())
+                .body("updatedAt", notNullValue());
+    }
+
+    protected void assertDriverContract(ValidatableResponse response) {
+        response
+                .body("$", aMapWithSize(5))
+                .body("$", allOf(hasKey("id"), hasKey("name"), hasKey("licenseNumber"), hasKey("createdAt"), hasKey("updatedAt")))
+                .body("id", notNullValue())
+                .body("name", notNullValue())
+                .body("licenseNumber", notNullValue())
+                .body("createdAt", notNullValue())
+                .body("updatedAt", notNullValue());
+    }
+
+    protected void assertTripContract(ValidatableResponse response) {
+        response
+                .body("$", aMapWithSize(8))
+                .body("$", allOf(
+                        hasKey("id"), hasKey("vehicle"), hasKey("driver"), hasKey("startTime"),
+                        hasKey("endTime"), hasKey("distanceKm"), hasKey("createdAt"), hasKey("updatedAt")))
+                .body("id", notNullValue())
+                .body("vehicle", notNullValue())
+                .body("driver", notNullValue())
+                .body("vehicle", aMapWithSize(7))
+                .body("driver", aMapWithSize(5))
+                .body("startTime", notNullValue())
+                .body("distanceKm", notNullValue())
+                .body("createdAt", notNullValue())
+                .body("updatedAt", notNullValue());
+    }
+
+    protected void assertLocationContract(ValidatableResponse response) {
+        response
+                .body("$", aMapWithSize(7))
+                .body("$", allOf(
+                        hasKey("id"), hasKey("trip"), hasKey("latitude"), hasKey("longitude"),
+                        hasKey("recordedAt"), hasKey("createdAt"), hasKey("updatedAt")))
+                .body("id", notNullValue())
+                .body("trip", notNullValue())
+                .body("trip", aMapWithSize(8))
+                .body("trip.vehicle", aMapWithSize(7))
+                .body("trip.driver", aMapWithSize(5))
+                .body("latitude", notNullValue())
+                .body("longitude", notNullValue())
+                .body("recordedAt", notNullValue())
+                .body("createdAt", notNullValue())
+                .body("updatedAt", notNullValue());
+    }
+
+    protected void assertDiagnosticEventContract(ValidatableResponse response) {
+        response
+                .body("$", aMapWithSize(8))
+                .body("$", allOf(
+                        hasKey("id"), hasKey("vehicle"), hasKey("code"), hasKey("severity"),
+                        hasKey("description"), hasKey("occurredAt"), hasKey("createdAt"), hasKey("updatedAt")))
+                .body("id", notNullValue())
+                .body("vehicle", notNullValue())
+                .body("vehicle", aMapWithSize(7))
+                .body("code", notNullValue())
+                .body("severity", notNullValue())
+                .body("description", notNullValue())
+                .body("occurredAt", notNullValue())
+                .body("createdAt", notNullValue())
+                .body("updatedAt", notNullValue());
     }
 }
