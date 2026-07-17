@@ -1,5 +1,6 @@
 services:
 
+  # Run MongoDB only: docker-compose up mongo
   mongo:
     image: mongo
     ports:
