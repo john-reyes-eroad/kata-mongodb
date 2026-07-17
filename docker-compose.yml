@@ -92,7 +92,7 @@ services:
 
   localstack:
     profiles: ["native", "java"]
-    image: localstack/localstack:4.3
+    image: localstack/localstack:2026.06.3
     environment:
       SERVICES: lambda
       DEBUG: "0"
