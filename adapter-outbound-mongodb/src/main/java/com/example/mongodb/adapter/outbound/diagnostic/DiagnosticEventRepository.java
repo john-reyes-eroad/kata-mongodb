@@ -40,14 +40,18 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
     @Override
     public Optional<DiagnosticEvent> findById(String id) {
         var objectId = parseObjectId(id);
+
         if (objectId == null) {
             return Optional.empty();
         }
-        var document = collection.find(eq("_id", objectId)).first();
-        if (document == null) {
-            return Optional.empty();
-        }
-        return Optional.of(toDiagnosticEvent(document));
+
+        var document = collection
+            .find(eq("_id", objectId))
+            .first();
+
+        return document == null
+            ? Optional.empty()
+            : Optional.of(toDiagnosticEvent(document));
     }
 
     @Override
@@ -60,9 +64,10 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
         var objectId = parseObjectId(keyword);
         if (objectId != null) {
             filter = Filters.or(
-                    filter,
-                    eq("_id", objectId),
-                    eq("vehicleId", objectId));
+                filter,
+                eq("_id", objectId),
+                eq("vehicleId", objectId)
+            );
         }
         return collection.countDocuments(filter);
     }
@@ -70,26 +75,35 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
     @Override
     public DiagnosticEvent save(DiagnosticEvent event) {
         var objectId = parseObjectId(event.id());
+
         if (objectId == null) {
             objectId = new ObjectId();
             var created = new DiagnosticEvent(
-                    objectId.toHexString(),
-                    event.vehicle(),
-                    event.code(),
-                    event.severity(),
-                    event.description(),
-                    event.occurredAt(),
-                    event.createdAt(),
-                    event.updatedAt()
+                objectId.toHexString(),
+                event.vehicle(),
+                event.code(),
+                event.severity(),
+                event.description(),
+                event.occurredAt(),
+                event.createdAt(),
+                event.updatedAt()
             );
-            collection.insertOne(toDocument(created, objectId));
+            collection
+                .insertOne(toDocument(created, objectId));
             return created;
         }
 
-        if (collection.replaceOne(eq("_id", objectId), toDocument(event, objectId),
-                new ReplaceOptions().upsert(false)).getMatchedCount() == 0) {
+        var updateResult = collection
+            .replaceOne(
+                eq("_id", objectId),
+                toDocument(event, objectId),
+                new ReplaceOptions().upsert(false)
+            );
+
+        if (updateResult.getMatchedCount() == 0) {
             throw new ResourceNotFoundException("Diagnostic event not found: " + event.id());
         }
+
         return event;
     }
 
@@ -97,27 +111,29 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
     public void delete(DiagnosticEvent event) {
         var objectId = parseObjectId(event.id());
         if (objectId != null) {
-            collection.deleteOne(eq("_id", objectId));
+            collection
+                .deleteOne(eq("_id", objectId));
         }
     }
 
     private Document toDocument(DiagnosticEvent event, ObjectId id) {
         return new Document("_id", id)
-                .append("vehicleId", parseObjectId(event.vehicle() == null ? null : event.vehicle().id()))
-                .append("code", event.code())
-                .append("severity", event.severity())
-                .append("description", event.description())
-                .append("occurredAt", toDate(event.occurredAt()))
-                .append("createdAt", toDate(event.createdAt()))
-                .append("updatedAt", toDate(event.updatedAt()));
+            .append("vehicleId", parseObjectId(event.vehicle() == null ? null : event.vehicle().id()))
+            .append("code", event.code())
+            .append("severity", event.severity())
+            .append("description", event.description())
+            .append("occurredAt", toDate(event.occurredAt()))
+            .append("createdAt", toDate(event.createdAt()))
+            .append("updatedAt", toDate(event.updatedAt()));
     }
 
     private Bson keywordFilter(String keyword) {
         var pattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         return Filters.or(
-                Filters.regex("code", pattern),
-                Filters.regex("severity", pattern),
-                Filters.regex("description", pattern));
+            Filters.regex("code", pattern),
+            Filters.regex("severity", pattern),
+            Filters.regex("description", pattern)
+        );
     }
 
     private DiagnosticEvent toDiagnosticEvent(Document document) {
@@ -126,14 +142,14 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
         var vehicleId = document.getObjectId("vehicleId");
 
         return new DiagnosticEvent(
-                hexId,
-                vehicleId == null ? null : new Vehicle(vehicleId.toHexString()),
-                document.getString("code"),
-                document.getString("severity"),
-                document.getString("description"),
-                toInstant(document.getDate("occurredAt")),
-                toInstant(document.getDate("createdAt")),
-                toInstant(document.getDate("updatedAt"))
+            hexId,
+            vehicleId == null ? null : new Vehicle(vehicleId.toHexString()),
+            document.getString("code"),
+            document.getString("severity"),
+            document.getString("description"),
+            toInstant(document.getDate("occurredAt")),
+            toInstant(document.getDate("createdAt")),
+            toInstant(document.getDate("updatedAt"))
         );
     }
 }
