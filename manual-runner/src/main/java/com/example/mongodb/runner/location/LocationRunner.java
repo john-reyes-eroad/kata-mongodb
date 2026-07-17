@@ -29,11 +29,11 @@ public class LocationRunner implements DomainRunner {
         Instant now = Instant.now();
 
         // seed a trip to reference
-        Trip trip = tripRepository.save(new Trip(null, null, null, now, now.plusSeconds(1800), new BigDecimal("10.0"), now, now));
+        Trip trip = tripRepository.save(new Trip(null, null, now, now.plusSeconds(1800), new BigDecimal("10.0"), now, now));
 
         // save
         Location saved = locationRepository.save(new Location(
-                null, trip,
+                trip,
                 new BigDecimal("-36.8485"),
                 new BigDecimal("174.7633"),
                 now, now, now));
