@@ -27,10 +27,10 @@ import org.junit.jupiter.api.BeforeAll;
 
 abstract class AbstractBlackboxTest {
 
-    private static final long REQUEST_INTERVAL_NANOS = 100_000_000L;
+    private static final long REQUEST_INTERVAL_NANOS = 10_000_000L;
     private static final Object REQUEST_PACING_LOCK = new Object();
     private final List<TestResource> createdResources = new ArrayList<>();
-    private static volatile boolean rateLimitPacingDisabled;
+    static volatile boolean rateLimitPacingDisabled;
     private static long nextRequestNanos;
 
     @BeforeAll
@@ -63,7 +63,7 @@ abstract class AbstractBlackboxTest {
         rateLimitPacingDisabled = disabled;
     }
 
-    private static void paceApiRequests() {
+    static void paceApiRequests() {
         synchronized (REQUEST_PACING_LOCK) {
             long now = System.nanoTime();
             long scheduledRequest = Math.max(now, nextRequestNanos);
