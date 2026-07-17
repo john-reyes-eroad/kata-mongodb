@@ -45,19 +45,19 @@ public class DriverRepository implements DriverPersistencePort {
 
     @Override
     public Optional<Driver> findById(String id) {
-        ObjectId objectId = parseObjectId(id);
+        var objectId = parseObjectId(id);
         if (objectId == null) {
             return Optional.empty();
         }
-        Document document = collection.find(eq("_id", objectId)).first();
+        var document = collection.find(eq("_id", objectId)).first();
         return document == null ? Optional.empty() : Optional.of(toDriver(document));
     }
 
     @Override
     public Map<String, Driver> findByIds(Collection<String> ids) {
-        LinkedHashSet<ObjectId> objectIds = new LinkedHashSet<>();
-        for (String id : ids) {
-            ObjectId objectId = parseObjectId(id);
+        var objectIds = new LinkedHashSet<ObjectId>();
+        for (var id : ids) {
+            var objectId = parseObjectId(id);
             if (objectId != null) {
                 objectIds.add(objectId);
             }
@@ -66,10 +66,10 @@ public class DriverRepository implements DriverPersistencePort {
             return Map.of();
         }
 
-        List<Document> documents = collection.find(Filters.in("_id", objectIds)).into(new ArrayList<>());
-        LinkedHashMap<String, Driver> driversById = new LinkedHashMap<>();
-        for (Document document : documents) {
-            Driver driver = toDriver(document);
+        var documents = collection.find(Filters.in("_id", objectIds)).into(new ArrayList<>());
+        var driversById = new LinkedHashMap<String, Driver>();
+        for (var document : documents) {
+            var driver = toDriver(document);
             if (driver.id() != null) {
                 driversById.put(driver.id(), driver);
             }
@@ -92,10 +92,10 @@ public class DriverRepository implements DriverPersistencePort {
     @Override
     public Driver save(Driver driver) {
         try {
-            ObjectId objectId = parseObjectId(driver.id());
+            var objectId = parseObjectId(driver.id());
             if (objectId == null) {
                 objectId = new ObjectId();
-                Driver created = new Driver(
+                var created = new Driver(
                         objectId.toHexString(),
                         driver.name(),
                         driver.licenseNumber(),
@@ -120,7 +120,7 @@ public class DriverRepository implements DriverPersistencePort {
     }
 
     private String duplicateMessage(MongoWriteException ex) {
-        String message = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
+        var message = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
         return message.contains("licensenumber")
                 ? "Driver license number must be unique"
                 : "Driver name must be unique";
@@ -128,7 +128,7 @@ public class DriverRepository implements DriverPersistencePort {
 
     @Override
     public void delete(Driver driver) {
-        ObjectId objectId = parseObjectId(driver.id());
+        var objectId = parseObjectId(driver.id());
         if (objectId != null) {
             collection.deleteOne(eq("_id", objectId));
         }
@@ -143,14 +143,14 @@ public class DriverRepository implements DriverPersistencePort {
     }
 
     private Bson keywordFilter(String keyword) {
-        Pattern pattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+        var pattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         return Filters.or(
                 Filters.regex("name", pattern),
                 Filters.regex("licenseNumber", pattern));
     }
 
     private Driver toDriver(Document document) {
-        ObjectId id = document.getObjectId("_id");
+        var id = document.getObjectId("_id");
         return new Driver(
                 id == null ? null : id.toHexString(),
                 document.getString("name"),
