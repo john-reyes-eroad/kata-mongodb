@@ -58,9 +58,8 @@ public class TripRepository implements TripPersistencePort {
 
     @Override
     public List<Trip> findAll() {
-        var pipeline = new ArrayList<>(LOOKUP_PIPELINE);
         return collection
-            .aggregate(pipeline)
+            .aggregate(LOOKUP_PIPELINE)
             .map(this::toTrip)
             .into(new ArrayList<>());
     }
