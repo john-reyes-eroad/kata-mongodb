@@ -43,8 +43,8 @@ public final class RateLimitFilter implements Filter {
             return;
         }
 
-        Bucket bucket = clientBuckets.get(resolveClientIdentity(httpRequest), ignored -> newBucket());
-        ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+        var bucket = clientBuckets.get(resolveClientIdentity(httpRequest), ignored -> newBucket());
+        var probe = bucket.tryConsumeAndReturnRemaining(1);
         applyRateLimitHeaders(httpResponse, probe);
 
         if (probe.isConsumed()) {
@@ -52,7 +52,7 @@ public final class RateLimitFilter implements Filter {
             return;
         }
 
-        long retryAfterSeconds = secondsUntil(probe.getNanosToWaitForRefill());
+        var retryAfterSeconds = secondsUntil(probe.getNanosToWaitForRefill());
         httpResponse.setHeader("Retry-After", Long.toString(retryAfterSeconds));
         httpResponse.setStatus(TOO_MANY_REQUESTS);
         httpResponse.setContentType("application/json");
@@ -64,7 +64,7 @@ public final class RateLimitFilter implements Filter {
     }
 
     private Bucket newBucket() {
-        Bandwidth limit = Bandwidth.builder()
+        var limit = Bandwidth.builder()
                 .capacity(properties.requestsPerSecond())
                 .refillIntervally(properties.requestsPerSecond(), REFILL_PERIOD)
                 .build();
@@ -88,7 +88,7 @@ public final class RateLimitFilter implements Filter {
     }
 
     private String resolveClientIdentity(HttpServletRequest request) {
-        String remoteAddress = request.getRemoteAddr();
+        var remoteAddress = request.getRemoteAddr();
         return remoteAddress == null || remoteAddress.isBlank() ? "unknown" : remoteAddress;
     }
 }
