@@ -40,7 +40,10 @@ public class DriverRepository implements DriverPersistencePort {
 
     @Override
     public List<Driver> findAll() {
-        return collection.find().map(this::toDriver).into(new ArrayList<>());
+        return collection
+            .find()
+            .map(this::toDriver)
+            .into(new ArrayList<>());
     }
 
     @Override
@@ -92,7 +95,10 @@ public class DriverRepository implements DriverPersistencePort {
 
     @Override
     public List<Driver> search(String keyword) {
-        return collection.find(keywordFilter(keyword)).map(this::toDriver).into(new ArrayList<>());
+        return collection
+            .find(keywordFilter(keyword))
+            .map(this::toDriver)
+            .into(new ArrayList<>());
     }
 
     @Override
