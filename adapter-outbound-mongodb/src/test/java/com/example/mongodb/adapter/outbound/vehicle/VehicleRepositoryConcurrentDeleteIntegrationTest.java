@@ -2,7 +2,6 @@ package com.example.mongodb.adapter.outbound.vehicle;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -17,20 +16,11 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 @EnabledIfSystemProperty(named = "mongodb.integration.tests", matches = "true")
 class VehicleRepositoryConcurrentDeleteIntegrationTest {
 
-    private VehicleRepository createRepository(MongoDatabase database) throws Exception {
-        VehicleRepository repository = new VehicleRepository();
-        Field field = VehicleRepository.class.getDeclaredField("database");
-        field.setAccessible(true);
-        field.set(repository, database);
-        repository.init();
-        return repository;
-    }
-
     @Test
-    void updateShouldReturnNotFoundWhenRecordIsDeletedAfterItsPreliminaryRead() throws Exception {
+    void updateShouldReturnNotFoundWhenRecordIsDeletedAfterItsPreliminaryRead() {
         try (MongoClient client = MongoClients.create("mongodb://localhost:27017")) {
             MongoDatabase database = client.getDatabase("kata_mongodb");
-            VehicleRepository repository = createRepository(database);
+            VehicleRepository repository = new VehicleRepository(database);
             String suffix = UUID.randomUUID().toString();
             Instant now = Instant.now();
             Vehicle created = repository.save(new Vehicle(

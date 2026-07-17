@@ -20,11 +20,9 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.result.UpdateResult;
-import jakarta.annotation.PostConstruct;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import static com.example.mongodb.adapter.outbound.common.MongoSupport.parseObjectId;
@@ -35,13 +33,9 @@ import static com.mongodb.client.model.Filters.eq;
 @Repository
 public class VehicleRepository implements VehiclePersistencePort {
 
-    @Autowired
-    private MongoDatabase database;
+    private final MongoCollection<Document> collection;
 
-    private MongoCollection<Document> collection;
-
-    @PostConstruct
-    public void init() {
+    public VehicleRepository(MongoDatabase database) {
         this.collection = database.getCollection("vehicles");
     }
 
