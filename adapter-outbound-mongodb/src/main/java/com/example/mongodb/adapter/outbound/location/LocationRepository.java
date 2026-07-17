@@ -31,10 +31,12 @@ public class LocationRepository implements LocationPersistencePort {
         this.collection = database.getCollection("locations");
     }
 
+    @Override
     public List<Location> findAll() {
         return collection.find().map(this::toLocation).into(new ArrayList<>());
     }
 
+    @Override
     public Optional<Location> findById(String id) {
         ObjectId objectId = parseObjectId(id);
         if (objectId == null) {
@@ -47,6 +49,7 @@ public class LocationRepository implements LocationPersistencePort {
         return Optional.of(toLocation(document));
     }
 
+    @Override
     public long count(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return collection.countDocuments();
@@ -61,6 +64,7 @@ public class LocationRepository implements LocationPersistencePort {
                 eq("tripId", objectId)));
     }
 
+    @Override
     public Location save(Location location) {
         ObjectId objectId = parseObjectId(location.id());
         if (objectId == null) {
@@ -85,6 +89,7 @@ public class LocationRepository implements LocationPersistencePort {
         return location;
     }
 
+    @Override
     public void delete(Location location) {
         ObjectId objectId = parseObjectId(location.id());
         if (objectId != null) {
@@ -107,7 +112,7 @@ public class LocationRepository implements LocationPersistencePort {
         ObjectId tripId = document.getObjectId("tripId");
         return new Location(
                 id == null ? null : id.toHexString(),
-                tripId == null ? null : new Trip(tripId.toHexString(), null, null, null, null, null, null, null),
+                tripId == null ? null : new Trip(tripId.toHexString()),
                 toBigDecimal(document.get("latitude")),
                 toBigDecimal(document.get("longitude")),
                 toInstant(document.getDate("recordedAt")),
