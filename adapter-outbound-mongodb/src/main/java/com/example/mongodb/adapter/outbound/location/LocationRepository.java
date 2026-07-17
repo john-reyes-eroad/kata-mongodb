@@ -38,11 +38,11 @@ public class LocationRepository implements LocationPersistencePort {
 
     @Override
     public Optional<Location> findById(String id) {
-        ObjectId objectId = parseObjectId(id);
+        var objectId = parseObjectId(id);
         if (objectId == null) {
             return Optional.empty();
         }
-        Document document = collection.find(eq("_id", objectId)).first();
+        var document = collection.find(eq("_id", objectId)).first();
         if (document == null) {
             return Optional.empty();
         }
@@ -55,7 +55,7 @@ public class LocationRepository implements LocationPersistencePort {
             return collection.countDocuments();
         }
 
-        ObjectId objectId = parseObjectId(keyword);
+        var objectId = parseObjectId(keyword);
         if (objectId == null) {
             return 0;
         }
@@ -66,10 +66,10 @@ public class LocationRepository implements LocationPersistencePort {
 
     @Override
     public Location save(Location location) {
-        ObjectId objectId = parseObjectId(location.id());
+        var objectId = parseObjectId(location.id());
         if (objectId == null) {
             objectId = new ObjectId();
-            Location created = new Location(
+            var created = new Location(
                     objectId.toHexString(),
                     location.trip(),
                     location.latitude(),
@@ -91,7 +91,7 @@ public class LocationRepository implements LocationPersistencePort {
 
     @Override
     public void delete(Location location) {
-        ObjectId objectId = parseObjectId(location.id());
+        var objectId = parseObjectId(location.id());
         if (objectId != null) {
             collection.deleteOne(eq("_id", objectId));
         }
@@ -108,8 +108,8 @@ public class LocationRepository implements LocationPersistencePort {
     }
 
     private Location toLocation(Document document) {
-        ObjectId id = document.getObjectId("_id");
-        ObjectId tripId = document.getObjectId("tripId");
+        var id = document.getObjectId("_id");
+        var tripId = document.getObjectId("tripId");
         return new Location(
                 id == null ? null : id.toHexString(),
                 tripId == null ? null : new Trip(tripId.toHexString()),
