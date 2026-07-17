@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 import com.example.mongocrud.common.DuplicateResourceException;
+import com.example.mongocrud.common.ResourceNotFoundException;
 import com.example.mongocrud.driver.Driver;
 import com.example.mongocrud.driver.port.outbound.DriverPersistencePort;
 import com.mongodb.ErrorCategory;
@@ -99,7 +100,10 @@ public class DriverRepository implements DriverPersistencePort {
                 return created;
             }
 
-            collection.replaceOne(eq("_id", objectId), toDocument(driver, objectId), new ReplaceOptions().upsert(false));
+            if (collection.replaceOne(eq("_id", objectId), toDocument(driver, objectId),
+                    new ReplaceOptions().upsert(false)).getMatchedCount() == 0) {
+                throw new ResourceNotFoundException("Driver not found: " + driver.id());
+            }
             return driver;
         } catch (MongoWriteException ex) {
             if (ex.getError() == null || ex.getError().getCategory() != ErrorCategory.DUPLICATE_KEY) {
