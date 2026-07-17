@@ -8,6 +8,11 @@ spring:
 server:
   port: 8080
 
+rate-limit:
+  requests-per-second: 10
+  maximum-clients: 10000
+  client-idle-timeout: PT10M
+
 management:
   endpoints:
     web:
