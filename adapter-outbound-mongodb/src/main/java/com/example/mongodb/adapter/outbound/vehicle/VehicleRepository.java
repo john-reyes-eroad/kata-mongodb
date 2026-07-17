@@ -46,27 +46,39 @@ public class VehicleRepository implements VehiclePersistencePort {
     @Override
     public Optional<Vehicle> findById(String id) {
         var objectId = parseObjectId(id);
+
         if (objectId == null) {
             return Optional.empty();
         }
-        var document = collection.find(eq("_id", objectId)).first();
-        return document == null ? Optional.empty() : Optional.of(toVehicle(document));
+
+        var document = collection
+            .find(eq("_id", objectId))
+            .first();
+
+        return document == null
+            ? Optional.empty()
+            : Optional.of(toVehicle(document));
     }
 
     @Override
     public Map<String, Vehicle> findByIds(Collection<String> ids) {
         var objectIds = new LinkedHashSet<ObjectId>();
+
         for (var id : ids) {
             var objectId = parseObjectId(id);
             if (objectId != null) {
                 objectIds.add(objectId);
             }
         }
+
         if (objectIds.isEmpty()) {
             return Map.of();
         }
 
-        var documents = collection.find(Filters.in("_id", objectIds)).into(new ArrayList<>());
+        var documents = collection
+            .find(Filters.in("_id", objectIds))
+            .into(new ArrayList<>());
+
         var vehiclesById = new LinkedHashMap<String, Vehicle>();
         for (var document : documents) {
             var vehicle = toVehicle(document);
@@ -74,19 +86,23 @@ public class VehicleRepository implements VehiclePersistencePort {
                 vehiclesById.put(vehicle.id(), vehicle);
             }
         }
+
         return vehiclesById;
     }
 
     @Override
     public List<Vehicle> search(String keyword) {
-        return collection.find(keywordFilter(keyword)).map(this::toVehicle).into(new ArrayList<>());
+        return collection
+            .find(keywordFilter(keyword))
+            .map(this::toVehicle)
+            .into(new ArrayList<>());
     }
 
     @Override
     public long count(String keyword) {
         return keyword == null || keyword.isBlank()
-                ? collection.countDocuments()
-                : collection.countDocuments(keywordFilter(keyword));
+            ? collection.countDocuments()
+            : collection.countDocuments(keywordFilter(keyword));
     }
 
     @Override
@@ -105,7 +121,8 @@ public class VehicleRepository implements VehiclePersistencePort {
                     vehicle.createdAt(),
                     vehicle.updatedAt()
                 );
-                collection.insertOne(toDocument(vehicleCreated, objectId));
+                collection
+                    .insertOne(toDocument(vehicleCreated, objectId));
                 return vehicleCreated;
             }
 
@@ -133,7 +150,8 @@ public class VehicleRepository implements VehiclePersistencePort {
     public void delete(Vehicle vehicle) {
         var objectId = parseObjectId(vehicle.id());
         if (objectId != null) {
-            collection.deleteOne(eq("_id", objectId));
+            collection
+                .deleteOne(eq("_id", objectId));
         }
     }
 
@@ -152,20 +170,21 @@ public class VehicleRepository implements VehiclePersistencePort {
         return Filters.or(
             Filters.regex("vin", pattern),
             Filters.regex("make", pattern),
-            Filters.regex("model", pattern));
+            Filters.regex("model", pattern)
+        );
     }
 
     private Vehicle toVehicle(Document document) {
         var id = document.getObjectId("_id");
         var year = document.get("year", Number.class);
         return new Vehicle(
-                id == null ? null : id.toHexString(),
-                document.getString("vin"),
-                document.getString("make"),
-                document.getString("model"),
-                year == null ? 0 : year.intValue(),
-                toInstant(document.getDate("createdAt")),
-                toInstant(document.getDate("updatedAt"))
+            id == null ? null : id.toHexString(),
+            document.getString("vin"),
+            document.getString("make"),
+            document.getString("model"),
+            year == null ? 0 : year.intValue(),
+            toInstant(document.getDate("createdAt")),
+            toInstant(document.getDate("updatedAt"))
         );
     }
 }
