@@ -3,13 +3,11 @@ package com.example.mongocrud.diagnostic.application;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 
 import com.example.mongocrud.common.ResourceNotFoundException;
 import com.example.mongocrud.diagnostic.DiagnosticEvent;
 import com.example.mongocrud.diagnostic.port.inbound.DiagnosticEventUseCase;
 import com.example.mongocrud.diagnostic.port.outbound.DiagnosticEventPersistencePort;
-import com.example.mongocrud.vehicle.Vehicle;
 import com.example.mongocrud.vehicle.port.inbound.VehicleUseCase;
 import com.example.mongocrud.vehicle.port.outbound.VehiclePersistencePort;
 
@@ -42,8 +40,8 @@ public class DiagnosticEventService implements DiagnosticEventUseCase {
     }
 
     public DiagnosticEvent create(DiagnosticEventUpsertCommand command) {
-        Instant now = Instant.now();
-        DiagnosticEvent event = new DiagnosticEvent(
+        var now = Instant.now();
+        var event = new DiagnosticEvent(
                 null,
                 vehicleService.findById(command.vehicleId()),
                 command.code(),
@@ -57,8 +55,8 @@ public class DiagnosticEventService implements DiagnosticEventUseCase {
     }
 
     public DiagnosticEvent update(String id, DiagnosticEventUpsertCommand command) {
-        DiagnosticEvent existing = findById(id);
-        DiagnosticEvent updated = new DiagnosticEvent(
+        var existing = findById(id);
+        var updated = new DiagnosticEvent(
                 existing.id(),
                 vehicleService.findById(command.vehicleId()),
                 command.code(),
@@ -72,19 +70,19 @@ public class DiagnosticEventService implements DiagnosticEventUseCase {
     }
 
     public void delete(String id) {
-        DiagnosticEvent event = findById(id);
+        var event = findById(id);
         repository.delete(event);
     }
 
     private List<DiagnosticEvent> hydrate(List<DiagnosticEvent> events) {
-        LinkedHashSet<String> vehicleIds = new LinkedHashSet<>();
-        for (DiagnosticEvent event : events) {
+        var vehicleIds = new LinkedHashSet<String>();
+        for (var event : events) {
             if (event.vehicle() != null && event.vehicle().id() != null) {
                 vehicleIds.add(event.vehicle().id());
             }
         }
 
-        Map<String, Vehicle> vehiclesById = vehicleRepository.findByIds(vehicleIds);
+        var vehiclesById = vehicleRepository.findByIds(vehicleIds);
         return events.stream()
                 .map(event -> new DiagnosticEvent(
                         event.id(),
@@ -106,7 +104,7 @@ public class DiagnosticEventService implements DiagnosticEventUseCase {
         if (keyword == null) {
             return null;
         }
-        String trimmedKeyword = keyword.trim();
+        var trimmedKeyword = keyword.trim();
         return trimmedKeyword.isEmpty() ? null : trimmedKeyword;
     }
 }
