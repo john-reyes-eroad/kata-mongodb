@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:8080}"
-COUNT="${COUNT:-100}"
+COUNT="${COUNT:-10}"
 if [[ $# -gt 0 ]]; then
   COUNT="$1"
 fi
