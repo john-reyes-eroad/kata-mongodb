@@ -6,15 +6,29 @@ logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
-    headers = event.get("headers", {})
-    auth = headers.get("Authorization") or headers.get("authorization", "")
+    token = event.get("authorizationToken", "")
+    method_arn = event.get("methodArn", "*")
 
     # Simple Bearer token check — replace with real JWT validation as needed
-    is_authorized = auth.startswith("Bearer ")
+    is_authorized = token.startswith("Bearer ")
+    effect = "Allow" if is_authorized else "Deny"
 
     logger.info(json.dumps({
-        "authorized": is_authorized,
-        "auth_header_present": bool(auth),
+        "effect": effect,
+        "token_present": bool(token),
+        "method_arn": method_arn,
     }))
 
-    return {"isAuthorized": is_authorized}
+    return {
+        "principalId": "user",
+        "policyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": "execute-api:Invoke",
+                    "Effect": effect,
+                    "Resource": method_arn,
+                }
+            ],
+        },
+    }
