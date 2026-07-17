@@ -2,6 +2,7 @@ package com.example.mongocrud.blackbox;
 
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.filter.Filter;
 import org.junit.jupiter.api.BeforeAll;
 
 abstract class AbstractKongBlackboxTest extends AbstractBlackboxTest {
@@ -16,5 +17,11 @@ abstract class AbstractKongBlackboxTest extends AbstractBlackboxTest {
         RestAssured.requestSpecification = new RequestSpecBuilder()
                 .addHeader("Authorization", "Bearer test-token")
                 .build();
+        RestAssured.filters((Filter) (request, response, context) -> {
+            if (!rateLimitPacingDisabled) {
+                paceApiRequests();
+            }
+            return context.next(request, response);
+        });
     }
 }
