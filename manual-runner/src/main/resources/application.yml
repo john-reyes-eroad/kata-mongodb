@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: manual-runner
+  mongodb:
+    uri: mongodb://localhost:27017/kata_mongodb
+    database: kata_mongodb
+  main:
+    web-application-type: none
