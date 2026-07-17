@@ -27,6 +27,27 @@ Think in terms of:
 
 ## Step 3: Start with `mongosh` basics
 
+### Install mongosh
+
+**macOS (Homebrew):**
+```bash
+brew install mongosh
+```
+
+**Linux (apt):**
+```bash
+curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+sudo apt-get update && sudo apt-get install -y mongodb-mongosh
+```
+
+**Windows (Winget):**
+```bash
+winget install MongoDB.Shell
+```
+
+### Connect and explore
+
 ```bash
 mongosh "mongodb://localhost:27017/kata_mongodb"
 ```
