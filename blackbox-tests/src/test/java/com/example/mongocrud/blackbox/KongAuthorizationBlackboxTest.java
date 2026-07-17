@@ -3,7 +3,8 @@ package com.example.mongocrud.blackbox;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
-import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.RestAssured;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class KongAuthorizationBlackboxTest extends AbstractKongBlackboxTest {
@@ -16,10 +17,20 @@ class KongAuthorizationBlackboxTest extends AbstractKongBlackboxTest {
         "/api/diagnostic-events"
     };
 
+    @BeforeAll
+    static void configureBaseUrl() {
+        var fromProperty = System.getProperty("kong.baseUrl");
+        var fromEnv = System.getenv("KONG_BASE_URL");
+        RestAssured.baseURI = fromProperty != null && !fromProperty.isBlank()
+                ? fromProperty
+                : (fromEnv != null && !fromEnv.isBlank() ? fromEnv : "http://localhost:9090");
+        RestAssured.requestSpecification = null;
+    }
+
     @Test
     void requestsWithoutAuthorizationHeaderShouldReturn403() {
         for (String path : PROTECTED_PATHS) {
-            given(new RequestSpecBuilder().build())
+            given()
                     .when()
                     .get(path)
                     .then()
@@ -31,7 +42,8 @@ class KongAuthorizationBlackboxTest extends AbstractKongBlackboxTest {
     @Test
     void requestsWithInvalidTokenShouldReturn403() {
         for (String path : PROTECTED_PATHS) {
-            given(new RequestSpecBuilder().addHeader("Authorization", "invalid-token").build())
+            given()
+                    .header("Authorization", "invalid-token")
                     .when()
                     .get(path)
                     .then()
@@ -43,7 +55,8 @@ class KongAuthorizationBlackboxTest extends AbstractKongBlackboxTest {
     @Test
     void requestsWithValidBearerTokenShouldBeAllowed() {
         for (String path : PROTECTED_PATHS) {
-            given(new RequestSpecBuilder().addHeader("Authorization", "Bearer any-value").build())
+            given()
+                    .header("Authorization", "Bearer any-value")
                     .when()
                     .get(path)
                     .then()
