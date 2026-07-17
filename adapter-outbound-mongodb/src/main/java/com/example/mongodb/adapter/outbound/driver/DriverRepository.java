@@ -19,9 +19,11 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.ReplaceOptions;
+import jakarta.annotation.PostConstruct;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import static com.example.mongodb.adapter.outbound.common.MongoSupport.parseObjectId;
@@ -32,9 +34,13 @@ import static com.mongodb.client.model.Filters.eq;
 @Repository
 public class DriverRepository implements DriverPersistencePort {
 
-    private final MongoCollection<Document> collection;
+    @Autowired
+    private MongoDatabase database;
 
-    public DriverRepository(MongoDatabase database) {
+    private MongoCollection<Document> collection;
+
+    @PostConstruct
+    public void init() {
         this.collection = database.getCollection("drivers");
     }
 
