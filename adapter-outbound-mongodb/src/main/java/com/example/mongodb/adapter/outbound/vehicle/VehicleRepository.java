@@ -19,7 +19,6 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.ReplaceOptions;
-import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -46,19 +45,19 @@ public class VehicleRepository implements VehiclePersistencePort {
 
     @Override
     public Optional<Vehicle> findById(String id) {
-        ObjectId objectId = parseObjectId(id);
+        var objectId = parseObjectId(id);
         if (objectId == null) {
             return Optional.empty();
         }
-        Document document = collection.find(eq("_id", objectId)).first();
+        var document = collection.find(eq("_id", objectId)).first();
         return document == null ? Optional.empty() : Optional.of(toVehicle(document));
     }
 
     @Override
     public Map<String, Vehicle> findByIds(Collection<String> ids) {
-        LinkedHashSet<ObjectId> objectIds = new LinkedHashSet<>();
-        for (String id : ids) {
-            ObjectId objectId = parseObjectId(id);
+        var objectIds = new LinkedHashSet<ObjectId>();
+        for (var id : ids) {
+            var objectId = parseObjectId(id);
             if (objectId != null) {
                 objectIds.add(objectId);
             }
@@ -67,10 +66,10 @@ public class VehicleRepository implements VehiclePersistencePort {
             return Map.of();
         }
 
-        List<Document> documents = collection.find(Filters.in("_id", objectIds)).into(new ArrayList<>());
-        LinkedHashMap<String, Vehicle> vehiclesById = new LinkedHashMap<>();
-        for (Document document : documents) {
-            Vehicle vehicle = toVehicle(document);
+        var documents = collection.find(Filters.in("_id", objectIds)).into(new ArrayList<>());
+        var vehiclesById = new LinkedHashMap<String, Vehicle>();
+        for (var document : documents) {
+            var vehicle = toVehicle(document);
             if (vehicle.id() != null) {
                 vehiclesById.put(vehicle.id(), vehicle);
             }
@@ -93,11 +92,11 @@ public class VehicleRepository implements VehiclePersistencePort {
     @Override
     public Vehicle save(Vehicle vehicle) {
         try {
-            ObjectId objectId = parseObjectId(vehicle.id());
+            var objectId = parseObjectId(vehicle.id());
 
             if (objectId == null) {
                 objectId = new ObjectId();
-                Vehicle vehicleCreated = new Vehicle(
+                var vehicleCreated = new Vehicle(
                     objectId.toHexString(),
                     vehicle.vin(),
                     vehicle.make(),
@@ -110,7 +109,7 @@ public class VehicleRepository implements VehiclePersistencePort {
                 return vehicleCreated;
             }
 
-            UpdateResult updateResult = collection
+            var updateResult = collection
                 .replaceOne(
                     eq("_id", objectId),
                     toDocument(vehicle, objectId),
@@ -132,7 +131,7 @@ public class VehicleRepository implements VehiclePersistencePort {
 
     @Override
     public void delete(Vehicle vehicle) {
-        ObjectId objectId = parseObjectId(vehicle.id());
+        var objectId = parseObjectId(vehicle.id());
         if (objectId != null) {
             collection.deleteOne(eq("_id", objectId));
         }
@@ -149,7 +148,7 @@ public class VehicleRepository implements VehiclePersistencePort {
     }
 
     private Bson keywordFilter(String keyword) {
-        Pattern pattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+        var pattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         return Filters.or(
             Filters.regex("vin", pattern),
             Filters.regex("make", pattern),
@@ -157,8 +156,8 @@ public class VehicleRepository implements VehiclePersistencePort {
     }
 
     private Vehicle toVehicle(Document document) {
-        ObjectId id = document.getObjectId("_id");
-        Number year = document.get("year", Number.class);
+        var id = document.getObjectId("_id");
+        var year = document.get("year", Number.class);
         return new Vehicle(
                 id == null ? null : id.toHexString(),
                 document.getString("vin"),
