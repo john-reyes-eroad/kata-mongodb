@@ -24,6 +24,7 @@ This keeps HTTP and Mongo concerns at the edges while business flows are driven 
 - Spring Boot 4.1
 - MongoDB
 - MongoDB Java sync driver (`mongodb-driver-sync`)
+- Bucket4j and Caffeine for bounded per-client API rate limiting
 
 ## Domains
 
@@ -35,87 +36,89 @@ This keeps HTTP and Mongo concerns at the edges while business flows are driven 
 
 ## Prerequisites
 
-- Java 25
-- Maven
 - Docker + Docker Compose
-- GraalVM 25 with `native-image` (native builds only)
 
 ## Run with Docker Compose
 
-```bash
-docker compose up -d --build
-```
+Choose one runtime flavor. Both profiles start the MongoDB service and expose
+the API at `http://localhost:8080`; do not start both profiles at once.
 
-App URL:
-
-```bash
-http://localhost:8080
-```
-
-Health endpoint:
+### Native image
 
 ```bash
-http://localhost:8080/actuator/health
+docker compose --profile native up --build
 ```
 
-Stop:
+This profile builds the GraalVM native executable and runs it in a distroless
+image containing only the executable, required native libraries and CA
+certificates, plus a small BusyBox health-check probe. It does not contain a
+JRE or shell and runs as an unprivileged user.
+
+Native image compilation requires Docker Desktop to have at least 6 GiB of
+memory available to its build environment. Allocate 8 GiB when possible.
+If the build fails at `Dockerfile.native` with `ResourceExhausted` or
+`cannot allocate memory`, increase Docker Desktop's memory allocation and
+retry. This is build-time memory for GraalVM, not the native container's
+512 MiB runtime limit.
+
+### Java runtime
+
+```bash
+docker compose --profile java up --build
+```
+
+This profile packages the Spring Boot jar and runs it with Eclipse Temurin
+Java 25. It is useful when native-image build time or memory requirements are
+not appropriate for the environment.
+
+### Health and shutdown
+
+In a separate terminal:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+Press Ctrl+C in the Compose terminal to stop the services. Remove the stopped
+containers with:
 
 ```bash
 docker compose down
 ```
 
-The Compose image is built for the container platform and runs the native
-`kata-mongodb` executable. Its final distroless runtime contains only the
-native executable, the required native libraries and CA certificates, plus a
-small BusyBox health-check probe - it does not contain a JRE or shell. The
-application runs as an unprivileged user.
-
-## JVM build and run
-
-The default Maven build remains a JVM build:
+Build either flavor without starting it:
 
 ```bash
-mvn package
-java -jar bootstrap/target/bootstrap-0.0.1-SNAPSHOT.jar
+docker compose --profile native build app-native
+docker compose --profile java build app-java
 ```
 
-Start MongoDB first. Default Mongo config is in
-`bootstrap/src/main/resources/application.yml`.
+## API rate limiting
 
-## Native build and run
+All `/api/**` routes are limited independently for each client to 10 requests per
+second. The token bucket has a capacity of 10 and refills its 10 tokens every
+second, so a client can make an initial burst of 10 requests and then sustain 10
+requests per second. Requests that exceed the available tokens receive
+`429 Too Many Requests` with `Retry-After`, `RateLimit-Limit`,
+`RateLimit-Remaining`, and `RateLimit-Reset` headers.
 
-Use GraalVM 25 as `JAVA_HOME` and ensure `native-image --version` succeeds.
-The native profile is intentionally configured only on the executable
-`bootstrap` module. It activates Spring Boot AOT processing, produces
-`bootstrap/target/kata-mongodb`, and preserves the normal JVM packaging when
-the profile is absent.
+Client identity is the remote address observed by the application server.
+Forwarded headers, including `X-Forwarded-For`, are ignored so callers cannot
+select or spoof their quota. When the application runs behind a reverse proxy,
+the limit applies to that proxy's remote address unless the deployment makes
+the original client address available at the server transport layer.
 
-```bash
-mvn -pl bootstrap -am -Pnative native:compile
-./bootstrap/target/kata-mongodb
-```
-
-The Spring AOT output supplies application reflection and proxy metadata, and
-the MongoDB driver supplies its own native-image configuration. The only
-application hint registers Hibernate Validator's generated logging classes and
-the concrete validators used by the REST request DTOs, all of which Hibernate
-Validator resolves at runtime. The profile disables the external
-reachability-metadata repository because its current schema is newer than the
-supported GraalVM 25 schema; Spring AOT and dependency-bundled metadata are
-used instead.
+Buckets are held in an in-memory Caffeine cache capped at 10,000 clients and
+expire after 10 minutes without access. These values, along with the
+requests-per-second limit, are configurable under `rate-limit` in
+`bootstrap/src/main/resources/application.yml`. The filter is registered only
+for `/api/*`, so actuator endpoints such as `/actuator/health` are not limited.
 
 ## Container settings
 
 Docker Compose limits the application container to one CPU and 512 MiB of
-memory. The native executable starts directly, so JVM heap and direct-memory
-settings do not apply.
-
-Build and inspect the native image:
-
-```bash
-docker compose build app
-docker compose images app
-```
+memory. The native flavor starts directly, so JVM heap and direct-memory
+settings do not apply to it.
 
 Both Compose services use Docker's `local` logging driver with three 10 MiB rotated log files.
 
@@ -147,8 +150,11 @@ script can be run repeatedly against the same database.
 ## Blackbox tests
 
 Blackbox tests live in `blackbox-tests/` and exercise every endpoint documented in
-`API_ENDPOINTS.md`: CRUD operations, searches, count queries, and actuator endpoints. The tests
-remove records they create after each test.
+`API_ENDPOINTS.md`: CRUD operations, searches, count queries, request validation,
+canonical not-found errors, response contracts, rate limiting, and actuator
+endpoints. The tests pace ordinary API requests to stay within the limit, then use
+concurrent bursts to verify the 429 response and that spoofed forwarded headers do
+not create separate quotas. The tests remove records they create after each test.
 
 Run:
 
@@ -160,6 +166,14 @@ Set `API_BASE_URL` to target a non-default running API:
 
 ```bash
 API_BASE_URL=http://localhost:8080 mvn -f blackbox-tests/pom.xml test
+```
+
+The repository concurrency integration test is opt-in because it requires the
+Compose MongoDB service. Run it as part of Java-runtime verification:
+
+```bash
+mvn -Pmongodb-integration-tests -pl adapter-outbound-mongodb -am test
+mvn -f blackbox-tests/pom.xml test
 ```
 
 ## Learning guide
