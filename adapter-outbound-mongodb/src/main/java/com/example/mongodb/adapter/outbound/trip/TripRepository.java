@@ -39,44 +39,53 @@ public class TripRepository implements TripPersistencePort {
 
     @Override
     public List<Trip> findAll() {
-        var documents = collection.find().into(new ArrayList<>());
-        return documents.stream().map(this::toTrip).toList();
+        return collection.find().map(this::toTrip).into(new ArrayList<>());
     }
 
     @Override
     public Optional<Trip> findById(String id) {
         var objectId = parseObjectId(id);
+
         if (objectId == null) {
             return Optional.empty();
         }
-        var document = collection.find(eq("_id", objectId)).first();
-        if (document == null) {
-            return Optional.empty();
-        }
-        return Optional.of(toTrip(document));
+
+        var document = collection
+            .find(eq("_id", objectId))
+            .first();
+
+        return document == null
+            ? Optional.empty()
+            : Optional.of(toTrip(document));
     }
 
     @Override
     public Map<String, Trip> findByIds(Collection<String> ids) {
         var objectIds = new LinkedHashSet<ObjectId>();
+
         for (var id : ids) {
             var objectId = parseObjectId(id);
             if (objectId != null) {
                 objectIds.add(objectId);
             }
         }
+
         if (objectIds.isEmpty()) {
             return Map.of();
         }
 
-        var documents = collection.find(Filters.in("_id", objectIds)).into(new ArrayList<>());
-        var trips = documents.stream().map(this::toTrip).toList();
+        var documents = collection
+            .find(Filters.in("_id", objectIds))
+            .into(new ArrayList<>());
+
         var tripsById = new LinkedHashMap<String, Trip>();
-        for (var trip : trips) {
+        for (var document : documents) {
+            var trip = toTrip(document);
             if (trip.id() != null) {
                 tripsById.put(trip.id(), trip);
             }
         }
+
         return tripsById;
     }
 
@@ -91,34 +100,44 @@ public class TripRepository implements TripPersistencePort {
             return 0;
         }
         return collection.countDocuments(Filters.or(
-                eq("_id", objectId),
-                eq("vehicleId", objectId),
-                eq("driverId", objectId)));
+            eq("_id", objectId),
+            eq("vehicleId", objectId),
+            eq("driverId", objectId)
+        ));
     }
 
     @Override
     public Trip save(Trip trip) {
         var objectId = parseObjectId(trip.id());
+
         if (objectId == null) {
             objectId = new ObjectId();
             var created = new Trip(
-                    objectId.toHexString(),
-                    trip.vehicle(),
-                    trip.driver(),
-                    trip.startTime(),
-                    trip.endTime(),
-                    trip.distanceKm(),
-                    trip.createdAt(),
-                    trip.updatedAt()
+                objectId.toHexString(),
+                trip.vehicle(),
+                trip.driver(),
+                trip.startTime(),
+                trip.endTime(),
+                trip.distanceKm(),
+                trip.createdAt(),
+                trip.updatedAt()
             );
-            collection.insertOne(toDocument(created, objectId));
+            collection
+                .insertOne(toDocument(created, objectId));
             return created;
         }
 
-        if (collection.replaceOne(eq("_id", objectId), toDocument(trip, objectId),
-                new ReplaceOptions().upsert(false)).getMatchedCount() == 0) {
+        var updateResult = collection
+            .replaceOne(
+                eq("_id", objectId),
+                toDocument(trip, objectId),
+                new ReplaceOptions().upsert(false)
+            );
+
+        if (updateResult.getMatchedCount() == 0) {
             throw new ResourceNotFoundException("Trip not found: " + trip.id());
         }
+
         return trip;
     }
 
@@ -126,19 +145,20 @@ public class TripRepository implements TripPersistencePort {
     public void delete(Trip trip) {
         var objectId = parseObjectId(trip.id());
         if (objectId != null) {
-            collection.deleteOne(eq("_id", objectId));
+            collection
+                .deleteOne(eq("_id", objectId));
         }
     }
 
     private Document toDocument(Trip trip, ObjectId id) {
         return new Document("_id", id)
-                .append("vehicleId", parseObjectId(trip.vehicle() == null ? null : trip.vehicle().id()))
-                .append("driverId", parseObjectId(trip.driver() == null ? null : trip.driver().id()))
-                .append("startTime", toDate(trip.startTime()))
-                .append("endTime", toDate(trip.endTime()))
-                .append("distanceKm", toDecimal128(trip.distanceKm()))
-                .append("createdAt", toDate(trip.createdAt()))
-                .append("updatedAt", toDate(trip.updatedAt()));
+            .append("vehicleId", parseObjectId(trip.vehicle() == null ? null : trip.vehicle().id()))
+            .append("driverId", parseObjectId(trip.driver() == null ? null : trip.driver().id()))
+            .append("startTime", toDate(trip.startTime()))
+            .append("endTime", toDate(trip.endTime()))
+            .append("distanceKm", toDecimal128(trip.distanceKm()))
+            .append("createdAt", toDate(trip.createdAt()))
+            .append("updatedAt", toDate(trip.updatedAt()));
     }
 
     private Trip toTrip(Document document) {
@@ -146,14 +166,14 @@ public class TripRepository implements TripPersistencePort {
         var vehicleId = document.getObjectId("vehicleId");
         var driverId = document.getObjectId("driverId");
         return new Trip(
-                id == null ? null : id.toHexString(),
-                vehicleId == null ? null : new Vehicle(vehicleId.toHexString()),
-                driverId == null ? null : new Driver(driverId.toHexString()),
-                toInstant(document.getDate("startTime")),
-                toInstant(document.getDate("endTime")),
-                toBigDecimal(document.get("distanceKm")),
-                toInstant(document.getDate("createdAt")),
-                toInstant(document.getDate("updatedAt"))
+            id == null ? null : id.toHexString(),
+            vehicleId == null ? null : new Vehicle(vehicleId.toHexString()),
+            driverId == null ? null : new Driver(driverId.toHexString()),
+            toInstant(document.getDate("startTime")),
+            toInstant(document.getDate("endTime")),
+            toBigDecimal(document.get("distanceKm")),
+            toInstant(document.getDate("createdAt")),
+            toInstant(document.getDate("updatedAt"))
         );
     }
 }
