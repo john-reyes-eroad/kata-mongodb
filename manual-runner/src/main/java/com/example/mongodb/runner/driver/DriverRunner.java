@@ -1,7 +1,6 @@
 package com.example.mongodb.runner.driver;
 
 import java.time.Instant;
-import java.util.List;
 
 import com.example.mongocrud.driver.Driver;
 import com.example.mongocrud.driver.port.outbound.DriverPersistencePort;
@@ -21,17 +20,17 @@ public class DriverRunner implements DomainRunner {
 
     @Override
     public void run() {
-        Instant now = Instant.now();
+        var now = Instant.now();
 
         // save
-        Driver saved = repository.save(new Driver("Jane Smith", "DL-99887766", now, now));
+        var saved = repository.save(new Driver("Jane Smith", "DL-99887766", now, now));
         System.out.println("saved:   " + saved);
 
         // findById
         repository.findById(saved.id()).ifPresent(d -> System.out.println("findById: " + d));
 
         // findAll
-        List<Driver> all = repository.findAll();
+        var all = repository.findAll();
         System.out.println("findAll count: " + all.size());
 
         // count
@@ -39,11 +38,11 @@ public class DriverRunner implements DomainRunner {
         System.out.println("count (Smith):      " + repository.count("Smith"));
 
         // search
-        List<Driver> results = repository.search("Smith");
+        var results = repository.search("Smith");
         System.out.println("search (Smith): " + results.size() + " result(s)");
 
         // update
-        Driver updated = repository.save(new Driver(saved.id(), "Jane M. Smith", saved.licenseNumber(), saved.createdAt(), Instant.now()));
+        var updated = repository.save(new Driver(saved.id(), "Jane M. Smith", saved.licenseNumber(), saved.createdAt(), Instant.now()));
         System.out.println("updated: " + updated);
 
         // delete
