@@ -27,7 +27,7 @@ import org.junit.jupiter.api.BeforeAll;
 
 abstract class AbstractBlackboxTest {
 
-    private static final long REQUEST_INTERVAL_NANOS = 10_000_000L;
+    private static final long REQUEST_INTERVAL_NANOS = 25_000_000L;
     private static final Object REQUEST_PACING_LOCK = new Object();
     private final List<TestResource> createdResources = new ArrayList<>();
     static volatile boolean rateLimitPacingDisabled;
