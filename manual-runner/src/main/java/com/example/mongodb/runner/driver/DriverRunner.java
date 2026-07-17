@@ -24,7 +24,7 @@ public class DriverRunner implements DomainRunner {
         Instant now = Instant.now();
 
         // save
-        Driver saved = repository.save(new Driver(null, "Jane Smith", "DL-99887766", now, now));
+        Driver saved = repository.save(new Driver("Jane Smith", "DL-99887766", now, now));
         System.out.println("saved:   " + saved);
 
         // findById
