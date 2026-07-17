@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+import com.example.mongocrud.common.ResourceNotFoundException;
 import com.example.mongocrud.diagnostic.DiagnosticEvent;
 import com.example.mongocrud.diagnostic.port.outbound.DiagnosticEventPersistencePort;
 import com.example.mongocrud.vehicle.Vehicle;
@@ -81,7 +82,10 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
             return created;
         }
 
-        collection.replaceOne(eq("_id", objectId), toDocument(event, objectId), new ReplaceOptions().upsert(false));
+        if (collection.replaceOne(eq("_id", objectId), toDocument(event, objectId),
+                new ReplaceOptions().upsert(false)).getMatchedCount() == 0) {
+            throw new ResourceNotFoundException("Diagnostic event not found: " + event.id());
+        }
         return event;
     }
 
