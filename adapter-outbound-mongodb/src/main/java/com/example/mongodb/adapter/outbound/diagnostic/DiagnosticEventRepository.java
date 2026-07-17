@@ -39,11 +39,11 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
 
     @Override
     public Optional<DiagnosticEvent> findById(String id) {
-        ObjectId objectId = parseObjectId(id);
+        var objectId = parseObjectId(id);
         if (objectId == null) {
             return Optional.empty();
         }
-        Document document = collection.find(eq("_id", objectId)).first();
+        var document = collection.find(eq("_id", objectId)).first();
         if (document == null) {
             return Optional.empty();
         }
@@ -56,8 +56,8 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
             return collection.countDocuments();
         }
 
-        Bson filter = keywordFilter(keyword);
-        ObjectId objectId = parseObjectId(keyword);
+        var filter = keywordFilter(keyword);
+        var objectId = parseObjectId(keyword);
         if (objectId != null) {
             filter = Filters.or(
                     filter,
@@ -69,10 +69,10 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
 
     @Override
     public DiagnosticEvent save(DiagnosticEvent event) {
-        ObjectId objectId = parseObjectId(event.id());
+        var objectId = parseObjectId(event.id());
         if (objectId == null) {
             objectId = new ObjectId();
-            DiagnosticEvent created = new DiagnosticEvent(
+            var created = new DiagnosticEvent(
                     objectId.toHexString(),
                     event.vehicle(),
                     event.code(),
@@ -95,7 +95,7 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
 
     @Override
     public void delete(DiagnosticEvent event) {
-        ObjectId objectId = parseObjectId(event.id());
+        var objectId = parseObjectId(event.id());
         if (objectId != null) {
             collection.deleteOne(eq("_id", objectId));
         }
@@ -113,7 +113,7 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
     }
 
     private Bson keywordFilter(String keyword) {
-        Pattern pattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+        var pattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         return Filters.or(
                 Filters.regex("code", pattern),
                 Filters.regex("severity", pattern),
@@ -121,9 +121,9 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
     }
 
     private DiagnosticEvent toDiagnosticEvent(Document document) {
-        ObjectId id = document.getObjectId("_id");
-        String hexId = id == null ? null : id.toHexString();
-        ObjectId vehicleId = document.getObjectId("vehicleId");
+        var id = document.getObjectId("_id");
+        var hexId = id == null ? null : id.toHexString();
+        var vehicleId = document.getObjectId("vehicleId");
 
         return new DiagnosticEvent(
                 hexId,
