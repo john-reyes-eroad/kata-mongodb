@@ -24,11 +24,22 @@ public class VehicleRunner implements DomainRunner {
         Instant now = Instant.now();
 
         // save
-        Vehicle saved = repository.save(new Vehicle(null, "1HGBH41JXMN109186", "Honda", "Civic", 2021, now, now));
-        System.out.println("saved:   " + saved);
+        Vehicle saved = repository.save(
+            new Vehicle(
+                "1HGBH41JXMN109186",
+                "Honda",
+                "Civic",
+                2021,
+                now,
+                now
+            )
+        );
+        System.out.println("saved: " + saved);
 
         // findById
-        repository.findById(saved.id()).ifPresent(v -> System.out.println("findById: " + v));
+        repository
+            .findById(saved.id())
+            .ifPresent(v -> System.out.println("findById: " + v));
 
         // findAll
         List<Vehicle> all = repository.findAll();
@@ -36,14 +47,24 @@ public class VehicleRunner implements DomainRunner {
 
         // count
         System.out.println("count (no keyword): " + repository.count(null));
-        System.out.println("count (Honda):      " + repository.count("Honda"));
+        System.out.println("count (Honda): " + repository.count("Honda"));
 
         // search
         List<Vehicle> results = repository.search("Honda");
         System.out.println("search (Honda): " + results.size() + " result(s)");
 
         // update
-        Vehicle updated = repository.save(new Vehicle(saved.id(), saved.vin(), "Honda", "Civic EX", 2022, saved.createdAt(), Instant.now()));
+        Vehicle updated = repository.save(
+            new Vehicle(
+                saved.id(),
+                saved.vin(),
+                "Honda",
+                "Civic EX",
+                2022,
+                saved.createdAt(), 
+                Instant.now()
+            )
+        );
         System.out.println("updated: " + updated);
 
         // delete
