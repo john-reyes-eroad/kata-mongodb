@@ -102,6 +102,7 @@ services:
       - ./lambda/init.sh:/etc/localstack/init/ready.d/init.sh:ro
       - ./lambda:/lambda-src:ro
       - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
       interval: 10s
