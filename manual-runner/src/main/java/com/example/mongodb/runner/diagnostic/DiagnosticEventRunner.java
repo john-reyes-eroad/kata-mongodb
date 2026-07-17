@@ -1,7 +1,6 @@
 package com.example.mongodb.runner.diagnostic;
 
 import java.time.Instant;
-import java.util.List;
 
 import com.example.mongocrud.diagnostic.DiagnosticEvent;
 import com.example.mongocrud.diagnostic.port.outbound.DiagnosticEventPersistencePort;
@@ -27,13 +26,13 @@ public class DiagnosticEventRunner implements DomainRunner {
 
     @Override
     public void run() {
-        Instant now = Instant.now();
+        var now = Instant.now();
 
         // seed a vehicle to reference
-        Vehicle vehicle = vehicleRepository.save(new Vehicle("DIAG-VIN-001", "Ford", "Transit", 2019, now, now));
+        var vehicle = vehicleRepository.save(new Vehicle("DIAG-VIN-001", "Ford", "Transit", 2019, now, now));
 
         // save
-        DiagnosticEvent saved = diagnosticRepository.save(new DiagnosticEvent(
+        var saved = diagnosticRepository.save(new DiagnosticEvent(
                 vehicle,
                 "P0300", "ERROR",
                 "Random/Multiple Cylinder Misfire Detected",
@@ -44,7 +43,7 @@ public class DiagnosticEventRunner implements DomainRunner {
         diagnosticRepository.findById(saved.id()).ifPresent(e -> System.out.println("findById: " + e));
 
         // findAll
-        List<DiagnosticEvent> all = diagnosticRepository.findAll();
+        var all = diagnosticRepository.findAll();
         System.out.println("findAll count: " + all.size());
 
         // count
@@ -53,7 +52,7 @@ public class DiagnosticEventRunner implements DomainRunner {
         System.out.println("count (by vehicleId): " + diagnosticRepository.count(vehicle.id()));
 
         // update
-        DiagnosticEvent updated = diagnosticRepository.save(new DiagnosticEvent(
+        var updated = diagnosticRepository.save(new DiagnosticEvent(
                 saved.id(), vehicle,
                 saved.code(), "WARNING",
                 "Cylinder misfire resolved after tune-up",
