@@ -13,4 +13,18 @@ public record Location(
         Instant createdAt,
         Instant updatedAt
 ) {
+    public Location(
+            Trip trip,
+            BigDecimal latitude,
+            BigDecimal longitude,
+            Instant recordedAt,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        this(null, trip, latitude, longitude, recordedAt, createdAt, updatedAt);
+    }
+
+    public Location(String id) {
+        this(id, null, null, null, null, null, null);
+    }
 }
