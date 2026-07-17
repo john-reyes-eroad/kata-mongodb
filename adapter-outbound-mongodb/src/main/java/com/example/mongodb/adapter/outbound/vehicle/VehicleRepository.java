@@ -19,6 +19,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.ReplaceOptions;
+import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -38,10 +39,12 @@ public class VehicleRepository implements VehiclePersistencePort {
         this.collection = database.getCollection("vehicles");
     }
 
+    @Override
     public List<Vehicle> findAll() {
         return collection.find().map(this::toVehicle).into(new ArrayList<>());
     }
 
+    @Override
     public Optional<Vehicle> findById(String id) {
         ObjectId objectId = parseObjectId(id);
         if (objectId == null) {
@@ -51,6 +54,7 @@ public class VehicleRepository implements VehiclePersistencePort {
         return document == null ? Optional.empty() : Optional.of(toVehicle(document));
     }
 
+    @Override
     public Map<String, Vehicle> findByIds(Collection<String> ids) {
         LinkedHashSet<ObjectId> objectIds = new LinkedHashSet<>();
         for (String id : ids) {
@@ -74,47 +78,59 @@ public class VehicleRepository implements VehiclePersistencePort {
         return vehiclesById;
     }
 
+    @Override
     public List<Vehicle> search(String keyword) {
         return collection.find(keywordFilter(keyword)).map(this::toVehicle).into(new ArrayList<>());
     }
 
+    @Override
     public long count(String keyword) {
         return keyword == null || keyword.isBlank()
                 ? collection.countDocuments()
                 : collection.countDocuments(keywordFilter(keyword));
     }
 
+    @Override
     public Vehicle save(Vehicle vehicle) {
         try {
             ObjectId objectId = parseObjectId(vehicle.id());
+
             if (objectId == null) {
                 objectId = new ObjectId();
-                Vehicle created = new Vehicle(
-                        objectId.toHexString(),
-                        vehicle.vin(),
-                        vehicle.make(),
-                        vehicle.model(),
-                        vehicle.year(),
-                        vehicle.createdAt(),
-                        vehicle.updatedAt()
+                Vehicle vehicleCreated = new Vehicle(
+                    objectId.toHexString(),
+                    vehicle.vin(),
+                    vehicle.make(),
+                    vehicle.model(),
+                    vehicle.year(),
+                    vehicle.createdAt(),
+                    vehicle.updatedAt()
                 );
-                collection.insertOne(toDocument(created, objectId));
-                return created;
+                collection.insertOne(toDocument(vehicleCreated, objectId));
+                return vehicleCreated;
             }
 
-            if (collection.replaceOne(eq("_id", objectId), toDocument(vehicle, objectId),
-                    new ReplaceOptions().upsert(false)).getMatchedCount() == 0) {
+            UpdateResult updateResult = collection
+                .replaceOne(
+                    eq("_id", objectId),
+                    toDocument(vehicle, objectId),
+                    new ReplaceOptions().upsert(false)
+                );
+
+            if (updateResult.getMatchedCount() == 0) {
                 throw new ResourceNotFoundException("Vehicle not found: " + vehicle.id());
             }
+
             return vehicle;
         } catch (MongoWriteException ex) {
-            if (ex.getError() == null || ex.getError().getCategory() != ErrorCategory.DUPLICATE_KEY) {
+            if (ex.getError().getCategory() != ErrorCategory.DUPLICATE_KEY) {
                 throw ex;
             }
             throw new DuplicateResourceException("Vehicle VIN must be unique");
         }
     }
 
+    @Override
     public void delete(Vehicle vehicle) {
         ObjectId objectId = parseObjectId(vehicle.id());
         if (objectId != null) {
@@ -124,20 +140,20 @@ public class VehicleRepository implements VehiclePersistencePort {
 
     private Document toDocument(Vehicle vehicle, ObjectId id) {
         return new Document("_id", id)
-                .append("vin", vehicle.vin())
-                .append("make", vehicle.make())
-                .append("model", vehicle.model())
-                .append("year", vehicle.year())
-                .append("createdAt", toDate(vehicle.createdAt()))
-                .append("updatedAt", toDate(vehicle.updatedAt()));
+            .append("vin", vehicle.vin())
+            .append("make", vehicle.make())
+            .append("model", vehicle.model())
+            .append("year", vehicle.year())
+            .append("createdAt", toDate(vehicle.createdAt()))
+            .append("updatedAt", toDate(vehicle.updatedAt()));
     }
 
     private Bson keywordFilter(String keyword) {
         Pattern pattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         return Filters.or(
-                Filters.regex("vin", pattern),
-                Filters.regex("make", pattern),
-                Filters.regex("model", pattern));
+            Filters.regex("vin", pattern),
+            Filters.regex("make", pattern),
+            Filters.regex("model", pattern));
     }
 
     private Vehicle toVehicle(Document document) {
