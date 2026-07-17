@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 
 class RateLimitBlackboxTest extends AbstractBlackboxTest {
 
-    private static final int REQUESTS_PER_SECOND = 100;
+    private static final int REQUESTS_PER_SECOND = 50;
 
     @BeforeEach
     void disableRequestPacing() throws InterruptedException {
