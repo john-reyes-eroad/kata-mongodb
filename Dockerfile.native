@@ -12,6 +12,7 @@ COPY application/pom.xml application/pom.xml
 COPY adapter-inbound-rest/pom.xml adapter-inbound-rest/pom.xml
 COPY adapter-outbound-mongodb/pom.xml adapter-outbound-mongodb/pom.xml
 COPY bootstrap/pom.xml bootstrap/pom.xml
+COPY manual-runner/pom.xml manual-runner/pom.xml
 
 RUN --mount=type=cache,target=/root/.m2 \
     mvn --batch-mode --quiet -pl bootstrap -am -Pnative dependency:go-offline
