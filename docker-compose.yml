@@ -90,13 +90,16 @@ services:
         max-file: "3"
     restart: unless-stopped
 
-  moto:
+  floci:
     profiles: ["native", "java"]
-    image: motoserver/moto:latest
+    image: floci/floci:latest
     ports:
-      - "5000:5000"
+      - "4566:4566"
+    volumes:
+      - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/')"]
+      test: ["CMD", "curl", "-f", "http://localhost:4566/"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -111,11 +114,11 @@ services:
     profiles: ["native", "java"]
     image: python:3.12-slim
     environment:
-      AWS_ENDPOINT_URL: http://moto:5000
+      AWS_ENDPOINT_URL: http://floci:4566
     volumes:
       - ./lambda:/lambda-src:ro
     depends_on:
-      moto:
+      floci:
         condition: service_healthy
     command: >
       sh -c "pip install boto3 -q && python /lambda-src/deploy.py"
