@@ -3,7 +3,6 @@ package com.example.mongocrud.location.application;
 import java.util.LinkedHashSet;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 import com.example.mongocrud.common.ResourceNotFoundException;
 import com.example.mongocrud.location.Location;
@@ -35,8 +34,8 @@ public class LocationService implements LocationUseCase {
     }
 
     public Location create(LocationUpsertCommand command) {
-        Instant now = Instant.now();
-        Location location = new Location(
+        var now = Instant.now();
+        var location = new Location(
                 null,
                 tripService.findById(command.tripId()),
                 command.latitude(),
@@ -49,8 +48,8 @@ public class LocationService implements LocationUseCase {
     }
 
     public Location update(String id, LocationUpsertCommand command) {
-        Location existing = findById(id);
-        Location updated = new Location(
+        var existing = findById(id);
+        var updated = new Location(
                 existing.id(),
                 tripService.findById(command.tripId()),
                 command.latitude(),
@@ -63,19 +62,19 @@ public class LocationService implements LocationUseCase {
     }
 
     public void delete(String id) {
-        Location location = findById(id);
+        var location = findById(id);
         repository.delete(location);
     }
 
     private List<Location> hydrate(List<Location> locations) {
-        LinkedHashSet<String> tripIds = new LinkedHashSet<>();
-        for (Location location : locations) {
+        var tripIds = new LinkedHashSet<String>();
+        for (var location : locations) {
             if (location.trip() != null && location.trip().id() != null) {
                 tripIds.add(location.trip().id());
             }
         }
 
-        Map<String, com.example.mongocrud.trip.Trip> tripsById = tripService.findByIds(tripIds);
+        var tripsById = tripService.findByIds(tripIds);
         return locations.stream()
                 .map(location -> new Location(
                         location.id(),
@@ -96,7 +95,7 @@ public class LocationService implements LocationUseCase {
         if (keyword == null) {
             return null;
         }
-        String trimmedKeyword = keyword.trim();
+        var trimmedKeyword = keyword.trim();
         return trimmedKeyword.isEmpty() ? null : trimmedKeyword;
     }
 }
