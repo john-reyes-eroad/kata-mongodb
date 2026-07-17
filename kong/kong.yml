@@ -1,0 +1,10 @@
+_format_version: "3.0"
+
+services:
+  - name: kata-mongodb
+    url: http://app:8080
+    routes:
+      - name: kata-mongodb-route
+        paths:
+          - /
+        strip_path: false
