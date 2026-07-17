@@ -301,9 +301,88 @@ This codebase uses:
 
 Important patterns:
 1. Parse string IDs to `ObjectId`.
-2. Use repository-level batch fetch (`findByIds`) to avoid N+1 lookups.
+2. Use aggregation pipelines with `$lookup` to enrich reads in a single round-trip.
 3. Create indexes at startup.
 4. Convert temporal and numeric types explicitly (Instant, Decimal128).
+
+### Aggregation pipeline with `$lookup` in Java
+
+When a document references other collections (e.g. `trips` references `vehicles` and `drivers`), use an aggregation pipeline to fetch and embed the related documents server-side — one query, no N+1.
+
+Define the shared lookup stages once as a constant:
+
+```java
+private static final List<Document> LOOKUP_PIPELINE = List.of(
+    new Document("$lookup", new Document()
+        .append("from", "vehicles")
+        .append("localField", "vehicleId")
+        .append("foreignField", "_id")
+        .append("as", "vehicle")),
+    new Document("$unwind", new Document()
+        .append("path", "$vehicle")
+        .append("preserveNullAndEmptyArrays", true)),  // keep trips with no vehicle
+    new Document("$lookup", new Document()
+        .append("from", "drivers")
+        .append("localField", "driverId")
+        .append("foreignField", "_id")
+        .append("as", "driver")),
+    new Document("$unwind", new Document()
+        .append("path", "$driver")
+        .append("preserveNullAndEmptyArrays", true))
+);
+```
+
+For `findAll`, pass the pipeline directly to `aggregate()`:
+
+```java
+public List<Trip> findAll() {
+    var pipeline = new ArrayList<>(LOOKUP_PIPELINE);
+    return collection
+        .aggregate(pipeline)
+        .map(this::toTrip)
+        .into(new ArrayList<>());
+}
+```
+
+For `findById` and `findByIds`, prepend a `$match` stage then append the shared pipeline:
+
+```java
+public Optional<Trip> findById(String id) {
+    var objectId = parseObjectId(id);
+    if (objectId == null) return Optional.empty();
+
+    var pipeline = new ArrayList<Document>();
+    pipeline.add(new Document("$match", eq("_id", objectId)));
+    pipeline.addAll(LOOKUP_PIPELINE);
+
+    var document = collection.aggregate(pipeline).first();
+    return document == null ? Optional.empty() : Optional.of(toTrip(document));
+}
+```
+
+After `$lookup` + `$unwind`, the enriched document contains the full embedded subdoc. Map it in the domain mapper:
+
+```java
+private Trip toTrip(Document document) {
+    var id = document.getObjectId("_id");
+    return new Trip(
+        id == null ? null : id.toHexString(),
+        toVehicle(document.get("vehicle", Document.class)),  // full Vehicle, not just id stub
+        toDriver(document.get("driver", Document.class)),
+        toInstant(document.getDate("startTime")),
+        ...
+    );
+}
+```
+
+### PostgreSQL mental model mapping
+
+| PostgreSQL | Java + MongoDB driver |
+|---|---|
+| `JOIN vehicles ON vehicle_id = vehicles.id` | `$lookup` + `$unwind` in aggregation pipeline |
+| Single `SELECT` with `JOIN` | Single `collection.aggregate(pipeline)` call |
+| `LEFT JOIN` (null-safe) | `$unwind` with `preserveNullAndEmptyArrays: true` |
+| `WHERE id = ?` before join | `$match` stage prepended before lookup stages |
 
 ## Step 14: Practice checklist (do these in order)
 
