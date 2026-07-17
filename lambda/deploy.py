@@ -3,7 +3,7 @@ import zipfile
 import io
 import os
 
-endpoint_url = os.getenv("AWS_ENDPOINT_URL", "http://moto:5000")
+endpoint_url = os.getenv("AWS_ENDPOINT_URL", "http://floci:4566")
 
 client = boto3.client(
     "lambda",
