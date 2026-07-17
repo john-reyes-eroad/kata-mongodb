@@ -37,8 +37,8 @@ public class VehicleService implements VehicleUseCase {
     }
 
     public Vehicle create(VehicleUpsertCommand request) {
-        Instant now = Instant.now();
-        Vehicle vehicle = new Vehicle(
+        var now = Instant.now();
+        var vehicle = new Vehicle(
                 null,
                 request.vin(),
                 request.make(),
@@ -51,8 +51,8 @@ public class VehicleService implements VehicleUseCase {
     }
 
     public Vehicle update(String id, VehicleUpsertCommand request) {
-        Vehicle existing = findById(id);
-        Vehicle updated = new Vehicle(
+        var existing = findById(id);
+        var updated = new Vehicle(
                 existing.id(),
                 request.vin(),
                 request.make(),
@@ -65,7 +65,7 @@ public class VehicleService implements VehicleUseCase {
     }
 
     public void delete(String id) {
-        Vehicle vehicle = findById(id);
+        var vehicle = findById(id);
         repository.delete(vehicle);
     }
 
@@ -73,7 +73,7 @@ public class VehicleService implements VehicleUseCase {
         if (keyword == null) {
             return null;
         }
-        String trimmedKeyword = keyword.trim();
+        var trimmedKeyword = keyword.trim();
         return trimmedKeyword.isEmpty() ? null : trimmedKeyword;
     }
 }
