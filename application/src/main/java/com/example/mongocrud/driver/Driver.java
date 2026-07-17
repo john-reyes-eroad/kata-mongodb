@@ -9,4 +9,16 @@ public record Driver(
         Instant createdAt,
         Instant updatedAt
 ) {
+    public Driver(
+            String name,
+            String licenseNumber,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        this(null, name, licenseNumber, createdAt, updatedAt);
+    }
+
+    public Driver(String id) {
+        this(id, null, null, null, null);
+    }
 }
