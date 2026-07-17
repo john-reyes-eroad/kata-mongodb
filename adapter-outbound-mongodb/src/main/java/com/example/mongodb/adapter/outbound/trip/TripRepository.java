@@ -31,6 +31,25 @@ import static com.mongodb.client.model.Filters.eq;
 @Repository
 public class TripRepository implements TripPersistencePort {
 
+    private static final List<Document> LOOKUP_PIPELINE = List.of(
+        new Document("$lookup", new Document()
+            .append("from", "vehicles")
+            .append("localField", "vehicleId")
+            .append("foreignField", "_id")
+            .append("as", "vehicle")),
+        new Document("$unwind", new Document()
+            .append("path", "$vehicle")
+            .append("preserveNullAndEmptyArrays", true)),
+        new Document("$lookup", new Document()
+            .append("from", "drivers")
+            .append("localField", "driverId")
+            .append("foreignField", "_id")
+            .append("as", "driver")),
+        new Document("$unwind", new Document()
+            .append("path", "$driver")
+            .append("preserveNullAndEmptyArrays", true))
+    );
+
     private final MongoCollection<Document> collection;
 
     public TripRepository(MongoDatabase database) {
@@ -39,8 +58,9 @@ public class TripRepository implements TripPersistencePort {
 
     @Override
     public List<Trip> findAll() {
+        var pipeline = new ArrayList<>(LOOKUP_PIPELINE);
         return collection
-            .find()
+            .aggregate(pipeline)
             .map(this::toTrip)
             .into(new ArrayList<>());
     }
@@ -53,8 +73,12 @@ public class TripRepository implements TripPersistencePort {
             return Optional.empty();
         }
 
+        var pipeline = new ArrayList<Document>();
+        pipeline.add(new Document("$match", eq("_id", objectId)));
+        pipeline.addAll(LOOKUP_PIPELINE);
+
         var document = collection
-            .find(eq("_id", objectId))
+            .aggregate(pipeline)
             .first();
 
         return document == null
@@ -77,12 +101,12 @@ public class TripRepository implements TripPersistencePort {
             return Map.of();
         }
 
-        var documents = collection
-            .find(Filters.in("_id", objectIds))
-            .into(new ArrayList<>());
+        var pipeline = new ArrayList<Document>();
+        pipeline.add(new Document("$match", Filters.in("_id", objectIds)));
+        pipeline.addAll(LOOKUP_PIPELINE);
 
         var tripsById = new LinkedHashMap<String, Trip>();
-        for (var document : documents) {
+        for (var document : collection.aggregate(pipeline).into(new ArrayList<>())) {
             var trip = toTrip(document);
             if (trip.id() != null) {
                 tripsById.put(trip.id(), trip);
@@ -102,6 +126,7 @@ public class TripRepository implements TripPersistencePort {
         if (objectId == null) {
             return 0;
         }
+
         return collection.countDocuments(Filters.or(
             eq("_id", objectId),
             eq("vehicleId", objectId),
@@ -166,17 +191,46 @@ public class TripRepository implements TripPersistencePort {
 
     private Trip toTrip(Document document) {
         var id = document.getObjectId("_id");
-        var vehicleId = document.getObjectId("vehicleId");
-        var driverId = document.getObjectId("driverId");
         return new Trip(
             id == null ? null : id.toHexString(),
-            vehicleId == null ? null : new Vehicle(vehicleId.toHexString()),
-            driverId == null ? null : new Driver(driverId.toHexString()),
+            toVehicle(document.get("vehicle", Document.class)),
+            toDriver(document.get("driver", Document.class)),
             toInstant(document.getDate("startTime")),
             toInstant(document.getDate("endTime")),
             toBigDecimal(document.get("distanceKm")),
             toInstant(document.getDate("createdAt")),
             toInstant(document.getDate("updatedAt"))
+        );
+    }
+
+    private Vehicle toVehicle(Document doc) {
+        if (doc == null) {
+            return null;
+        }
+        var id = doc.getObjectId("_id");
+        var year = doc.get("year", Number.class);
+        return new Vehicle(
+            id == null ? null : id.toHexString(),
+            doc.getString("vin"),
+            doc.getString("make"),
+            doc.getString("model"),
+            year == null ? 0 : year.intValue(),
+            toInstant(doc.getDate("createdAt")),
+            toInstant(doc.getDate("updatedAt"))
+        );
+    }
+
+    private Driver toDriver(Document doc) {
+        if (doc == null) {
+            return null;
+        }
+        var id = doc.getObjectId("_id");
+        return new Driver(
+            id == null ? null : id.toHexString(),
+            doc.getString("name"),
+            doc.getString("licenseNumber"),
+            toInstant(doc.getDate("createdAt")),
+            toInstant(doc.getDate("updatedAt"))
         );
     }
 }
