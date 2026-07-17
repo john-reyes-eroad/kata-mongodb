@@ -131,7 +131,7 @@ services:
 
   kong-native:
     profiles: ["native"]
-    image: kong:3.9
+    image: kong:latest
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /kong/kong.yml
@@ -166,7 +166,7 @@ services:
 
   kong-java:
     profiles: ["java"]
-    image: kong:3.9
+    image: kong:latest
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /kong/kong.yml
