@@ -40,11 +40,18 @@ public class TripRunner implements DomainRunner {
         Driver driver = driverRepository.save(new Driver("Trip Runner Driver", "DL-TRIP-001", now, now));
 
         // save
-        Trip saved = tripRepository.save(new Trip(
-                vehicle, driver,
-                now, now.plusSeconds(3600),
-                new BigDecimal("42.5"),
-                now, now));
+        Trip saved = tripRepository
+            .save(
+                new Trip(
+                    vehicle,
+                    driver,
+                    now,
+                    now.plusSeconds(3600),
+                    new BigDecimal("42.5"),
+                    now,
+                    now
+                )
+            );
         System.out.println("saved:   " + saved);
 
         // findById
