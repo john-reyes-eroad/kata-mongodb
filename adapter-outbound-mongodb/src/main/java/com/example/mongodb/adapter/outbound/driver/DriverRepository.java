@@ -46,27 +46,39 @@ public class DriverRepository implements DriverPersistencePort {
     @Override
     public Optional<Driver> findById(String id) {
         var objectId = parseObjectId(id);
+
         if (objectId == null) {
             return Optional.empty();
         }
-        var document = collection.find(eq("_id", objectId)).first();
-        return document == null ? Optional.empty() : Optional.of(toDriver(document));
+
+        var document = collection
+            .find(eq("_id", objectId))
+            .first();
+
+        return document == null
+            ? Optional.empty()
+            : Optional.of(toDriver(document));
     }
 
     @Override
     public Map<String, Driver> findByIds(Collection<String> ids) {
         var objectIds = new LinkedHashSet<ObjectId>();
+
         for (var id : ids) {
             var objectId = parseObjectId(id);
             if (objectId != null) {
                 objectIds.add(objectId);
             }
         }
+
         if (objectIds.isEmpty()) {
             return Map.of();
         }
 
-        var documents = collection.find(Filters.in("_id", objectIds)).into(new ArrayList<>());
+        var documents = collection
+            .find(Filters.in("_id", objectIds))
+            .into(new ArrayList<>());
+
         var driversById = new LinkedHashMap<String, Driver>();
         for (var document : documents) {
             var driver = toDriver(document);
@@ -74,6 +86,7 @@ public class DriverRepository implements DriverPersistencePort {
                 driversById.put(driver.id(), driver);
             }
         }
+
         return driversById;
     }
 
@@ -85,31 +98,40 @@ public class DriverRepository implements DriverPersistencePort {
     @Override
     public long count(String keyword) {
         return keyword == null || keyword.isBlank()
-                ? collection.countDocuments()
-                : collection.countDocuments(keywordFilter(keyword));
+            ? collection.countDocuments()
+            : collection.countDocuments(keywordFilter(keyword));
     }
 
     @Override
     public Driver save(Driver driver) {
         try {
             var objectId = parseObjectId(driver.id());
+
             if (objectId == null) {
                 objectId = new ObjectId();
                 var created = new Driver(
-                        objectId.toHexString(),
-                        driver.name(),
-                        driver.licenseNumber(),
-                        driver.createdAt(),
-                        driver.updatedAt()
+                    objectId.toHexString(),
+                    driver.name(),
+                    driver.licenseNumber(),
+                    driver.createdAt(),
+                    driver.updatedAt()
                 );
-                collection.insertOne(toDocument(created, objectId));
+                collection
+                    .insertOne(toDocument(created, objectId));
                 return created;
             }
 
-            if (collection.replaceOne(eq("_id", objectId), toDocument(driver, objectId),
-                    new ReplaceOptions().upsert(false)).getMatchedCount() == 0) {
+            var updateResult = collection
+                .replaceOne(
+                    eq("_id", objectId),
+                    toDocument(driver, objectId),
+                    new ReplaceOptions().upsert(false)
+                );
+
+            if (updateResult.getMatchedCount() == 0) {
                 throw new ResourceNotFoundException("Driver not found: " + driver.id());
             }
+
             return driver;
         } catch (MongoWriteException ex) {
             if (ex.getError() == null || ex.getError().getCategory() != ErrorCategory.DUPLICATE_KEY) {
@@ -122,41 +144,43 @@ public class DriverRepository implements DriverPersistencePort {
     private String duplicateMessage(MongoWriteException ex) {
         var message = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
         return message.contains("licensenumber")
-                ? "Driver license number must be unique"
-                : "Driver name must be unique";
+            ? "Driver license number must be unique"
+            : "Driver name must be unique";
     }
 
     @Override
     public void delete(Driver driver) {
         var objectId = parseObjectId(driver.id());
         if (objectId != null) {
-            collection.deleteOne(eq("_id", objectId));
+            collection
+                .deleteOne(eq("_id", objectId));
         }
     }
 
     private Document toDocument(Driver driver, ObjectId id) {
         return new Document("_id", id)
-                .append("name", driver.name())
-                .append("licenseNumber", driver.licenseNumber())
-                .append("createdAt", toDate(driver.createdAt()))
-                .append("updatedAt", toDate(driver.updatedAt()));
+            .append("name", driver.name())
+            .append("licenseNumber", driver.licenseNumber())
+            .append("createdAt", toDate(driver.createdAt()))
+            .append("updatedAt", toDate(driver.updatedAt()));
     }
 
     private Bson keywordFilter(String keyword) {
         var pattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         return Filters.or(
-                Filters.regex("name", pattern),
-                Filters.regex("licenseNumber", pattern));
+            Filters.regex("name", pattern),
+            Filters.regex("licenseNumber", pattern)
+        );
     }
 
     private Driver toDriver(Document document) {
         var id = document.getObjectId("_id");
         return new Driver(
-                id == null ? null : id.toHexString(),
-                document.getString("name"),
-                document.getString("licenseNumber"),
-                toInstant(document.getDate("createdAt")),
-                toInstant(document.getDate("updatedAt"))
+            id == null ? null : id.toHexString(),
+            document.getString("name"),
+            document.getString("licenseNumber"),
+            toInstant(document.getDate("createdAt")),
+            toInstant(document.getDate("updatedAt"))
         );
     }
 }
