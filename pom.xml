@@ -20,7 +20,6 @@
     <module>adapter-inbound-rest</module>
     <module>adapter-outbound-mongodb</module>
     <module>bootstrap</module>
-    <module>manual-runner</module>
   </modules>
 
   <properties>
