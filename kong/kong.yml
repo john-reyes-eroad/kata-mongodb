@@ -10,7 +10,15 @@ services:
             - |
               local http = require("resty.http")
               local cjson = require("cjson")
-              local payload = cjson.encode({ headers = kong.request.get_headers() })
+
+              local method_arn = "arn:aws:execute-api:us-east-1:000000000000:local/"
+                .. kong.request.get_method() .. kong.request.get_path()
+
+              local payload = cjson.encode({
+                type = "TOKEN",
+                authorizationToken = kong.request.get_header("Authorization") or "",
+                methodArn = method_arn,
+              })
 
               local res, err
               for attempt = 1, 3 do
@@ -30,9 +38,14 @@ services:
               if err or not res or res.status ~= 200 then
                 return kong.response.exit(500, { message = "Authorization service unavailable" })
               end
+
               local result = cjson.decode(res.body)
-              if not result.isAuthorized then
-                return kong.response.exit(401, { message = "Unauthorized" })
+              local statements = result.policyDocument
+                and result.policyDocument.Statement
+              local effect = statements and statements[1] and statements[1].Effect
+
+              if effect ~= "Allow" then
+                return kong.response.exit(403, { message = "Forbidden" })
               end
     routes:
       - name: kata-mongodb-route
