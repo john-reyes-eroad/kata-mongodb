@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.example.mongocrud.common.ResourceNotFoundException;
 import com.example.mongocrud.driver.Driver;
 import com.example.mongocrud.trip.Trip;
 import com.example.mongocrud.trip.port.outbound.TripPersistencePort;
@@ -109,7 +110,10 @@ public class TripRepository implements TripPersistencePort {
             return created;
         }
 
-        collection.replaceOne(eq("_id", objectId), toDocument(trip, objectId), new ReplaceOptions().upsert(false));
+        if (collection.replaceOne(eq("_id", objectId), toDocument(trip, objectId),
+                new ReplaceOptions().upsert(false)).getMatchedCount() == 0) {
+            throw new ResourceNotFoundException("Trip not found: " + trip.id());
+        }
         return trip;
     }
 
