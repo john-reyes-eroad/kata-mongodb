@@ -34,7 +34,10 @@ public class DiagnosticEventRepository implements DiagnosticEventPersistencePort
 
     @Override
     public List<DiagnosticEvent> findAll() {
-        return collection.find().map(this::toDiagnosticEvent).into(new ArrayList<>());
+        return collection
+            .find()
+            .map(this::toDiagnosticEvent)
+            .into(new ArrayList<>());
     }
 
     @Override
