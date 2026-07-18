@@ -42,7 +42,8 @@ COPY --from=builder /build/bootstrap/target/bootstrap-0.0.1-SNAPSHOT.jar /app/ap
 
 RUN useradd --system --uid 10001 --create-home appuser
 
-ENV SERVER_PORT=8080
+ENV SERVER_PORT=8080 \
+    JAVA_TOOL_OPTIONS="-XX:+UseZGC"
 EXPOSE 8080
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
