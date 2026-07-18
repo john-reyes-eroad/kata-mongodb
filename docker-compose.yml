@@ -133,18 +133,20 @@ services:
     image: kong:latest
     environment:
       KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /kong/kong.yml
+      KONG_DECLARATIVE_CONFIG: /tmp/kong.yml
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ERROR_LOG: /dev/stderr
       KONG_ADMIN_LISTEN: "0.0.0.0:8001"
       KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES: resty.http,cjson
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["sh /kong/render-kong-config.sh && exec /docker-entrypoint.sh kong docker-start"]
     ports:
       - "9090:8000"
       - "8001:8001"
     volumes:
-      - ./kong/kong.yml:/kong/kong.yml:ro
+      - ./kong:/kong:ro
     healthcheck:
       test: ["CMD", "kong", "health"]
       interval: 10s
