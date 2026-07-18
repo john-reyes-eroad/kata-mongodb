@@ -1,14 +1,11 @@
 services:
 
-  # Run MongoDB only: docker-compose up mongo
   mongo:
     image: mongo
     ports:
       - "27017:27017"
     environment:
       MONGO_INITDB_DATABASE: kata_mongodb
-#    volumes:
-#      - mongo_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "mongodb://localhost:27017/admin", "--eval", "db.runCommand({ ping: 1 }).ok"]
       interval: 5s
@@ -163,6 +160,3 @@ services:
         max-size: 10m
         max-file: "3"
     restart: unless-stopped
-
-#volumes:
-#  mongo_data:
