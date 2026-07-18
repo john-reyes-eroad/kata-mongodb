@@ -19,7 +19,9 @@ This project uses Kong as the public gateway and delegates authorization to a La
 
 ## Where it is configured
 
-- Kong plugin logic: `kong/kong.yml`
+- Kong Lua logic: `kong/scripts/authorizer-pre-function.lua`
+- Kong declarative template: `kong/kong.yml` (rendered to `/tmp/kong.yml` at container startup)
+- Kong render script: `kong/render-kong-config.sh`
 - Lambda implementation (Java 25): `lambda-authorizer/src/main/java/com/example/mongocrud/lambda/Authorizer.java`
 - Lambda packaging and deployment script: `lambda/deploy.sh`
 - Compose wiring (`floci`, `lambda-init`, `kong`): `docker-compose.yml`
