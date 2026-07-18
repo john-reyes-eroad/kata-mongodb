@@ -17,6 +17,8 @@ This project uses Kong as the public gateway and delegates authorization to a La
    - not `Allow` -> returns `403 Forbidden`
    - Lambda unavailable/non-200 -> returns `500 Authorization service unavailable`
 
+Kong caches each auth decision for 60 seconds, keyed by authorization token and request method/path (`methodArn`).
+
 ## Where it is configured
 
 - Kong Lua logic: `kong/scripts/authorizer-pre-function.lua`
