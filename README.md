@@ -40,8 +40,11 @@ This keeps HTTP and Mongo concerns at the edges while business flows are driven 
 
 ## Run with Docker Compose
 
-Choose one runtime flavor. Both profiles start the MongoDB service and expose
-the API at `http://localhost:8080`; do not start both profiles at once.
+Choose one runtime flavor. Both profiles start MongoDB, floci, lambda-init,
+Kong, and the app; do not start both profiles at once.
+
+- Direct app URL: `http://localhost:8080`
+- Kong gateway URL: `http://localhost:9090`
 
 ### Native image
 
@@ -95,9 +98,9 @@ docker compose --profile java build app-java
 
 ## API rate limiting
 
-All `/api/**` routes are limited independently for each client to 10 requests per
-second. The token bucket has a capacity of 10 and refills its 10 tokens every
-second, so a client can make an initial burst of 10 requests and then sustain 10
+All `/api/**` routes are limited independently for each client to 50 requests per
+second. The token bucket has a capacity of 50 and refills its 50 tokens every
+second, so a client can make an initial burst of 50 requests and then sustain 50
 requests per second. Requests that exceed the available tokens receive
 `429 Too Many Requests` with `Retry-After`, `RateLimit-Limit`,
 `RateLimit-Remaining`, and `RateLimit-Reset` headers.
@@ -126,6 +129,10 @@ Both Compose services use Docker's `local` logging driver with three 10 MiB rota
 
 See `API_ENDPOINTS.md` for all endpoints by domain.
 For gateway authorization flow details, see `KONG_AWS_LAMBDA_AUTHORIZER.md`.
+For manual-runner usage, see `manual-runner/README.md`.
+
+Kong-proxied API calls require an `Authorization` header. For the current local
+authorizer implementation, any value starting with `Bearer ` is accepted.
 
 Every domain also provides `GET /api/<domain>/count?keyword=<keyword>`. It returns only
 `{"count": <number>}`. Omit `keyword`, or provide an empty or whitespace-only value, to count all
@@ -133,7 +140,8 @@ documents in that domain.
 
 ## Manual exploratory scripts
 
-Use scripts under `scripts/` for per-endpoint curl calls.
+Use scripts under `scripts/spring/` for direct app calls and `scripts/kong/`
+for gateway calls with Bearer auth.
 
 Script usage guide:
 
@@ -142,7 +150,7 @@ Script usage guide:
 ## Seed sample data
 
 ```bash
-COUNT=100 ./scripts/seed/seed-domains.sh
+COUNT=10 ./scripts/spring/seed/seed-domains.sh
 ```
 
 `COUNT` supports `1..10000`. Seed values with unique constraints include a run token, so the
