@@ -125,6 +125,7 @@ Both Compose services use Docker's `local` logging driver with three 10 MiB rota
 ## API reference
 
 See `API_ENDPOINTS.md` for all endpoints by domain.
+For gateway authorization flow details, see `KONG_AWS_LAMBDA_AUTHORIZER.md`.
 
 Every domain also provides `GET /api/<domain>/count?keyword=<keyword>`. It returns only
 `{"count": <number>}`. Omit `keyword`, or provide an empty or whitespace-only value, to count all
