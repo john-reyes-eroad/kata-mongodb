@@ -7,8 +7,8 @@ services:
       - "27017:27017"
     environment:
       MONGO_INITDB_DATABASE: kata_mongodb
-    volumes:
-      - mongo_data:/data/db
+#    volumes:
+#      - mongo_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "mongodb://localhost:27017/admin", "--eval", "db.runCommand({ ping: 1 }).ok"]
       interval: 5s
@@ -96,7 +96,6 @@ services:
     ports:
       - "4566:4566"
     volumes:
-      - ./data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/"]
@@ -112,16 +111,19 @@ services:
 
   lambda-init:
     profiles: ["native", "java"]
-    image: python:3.12-slim
+    image: maven:3.9.11-eclipse-temurin-25
     environment:
       AWS_ENDPOINT_URL: http://floci:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
     volumes:
-      - ./lambda:/lambda-src:ro
+      - .:/workspace
+    working_dir: /workspace
     depends_on:
       floci:
         condition: service_healthy
-    command: >
-      sh -c "pip install boto3 -q && python /lambda-src/deploy.py"
+    command: ["sh", "/workspace/lambda/deploy.sh"]
     restart: on-failure
     logging:
       driver: local
@@ -162,5 +164,5 @@ services:
         max-file: "3"
     restart: unless-stopped
 
-volumes:
-  mongo_data:
+#volumes:
+#  mongo_data:
