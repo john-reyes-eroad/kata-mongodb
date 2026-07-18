@@ -72,7 +72,8 @@ docker compose --profile java up --build
 
 This profile packages the Spring Boot jar and runs it with Eclipse Temurin
 Java 25. It is useful when native-image build time or memory requirements are
-not appropriate for the environment.
+not appropriate for the environment. ZGC is enabled by default for this profile
+via `JAVA_TOOL_OPTIONS=-XX:+UseZGC`.
 
 ### Health and shutdown
 
